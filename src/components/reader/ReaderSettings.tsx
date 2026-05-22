@@ -79,6 +79,21 @@ export function ReaderSettings() {
             />
             正文搜索区分大小写
           </label>
+          <div>
+            <label className="mb-1 flex justify-between text-xs">
+              <span className="text-muted-foreground">朗读速度</span>
+              <span className="font-medium">{settingsState.assist.ttsRate.toFixed(1)}x</span>
+            </label>
+            <input
+              type="range"
+              min={0.5}
+              max={2}
+              step={0.1}
+              value={settingsState.assist.ttsRate}
+              onChange={(event) => patchAssist({ ttsRate: Number(event.target.value) })}
+              className="h-2 w-full cursor-pointer appearance-none rounded bg-muted accent-primary"
+            />
+          </div>
         </section>
 
         <ReaderChromePanel />

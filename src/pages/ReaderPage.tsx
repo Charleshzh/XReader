@@ -9,6 +9,7 @@ import { ChapterTOC } from "@/components/reader/ChapterTOC";
 import { ReaderSettings } from "@/components/reader/ReaderSettings";
 import { BookmarkPanel } from "@/components/reader/BookmarkPanel";
 import { AnnotationPanel } from "@/components/reader/AnnotationPanel";
+import { htmlToSpeechText } from "@/lib/tts";
 import { Loader2 } from "lucide-react";
 
 export function ReaderPage() {
@@ -58,6 +59,7 @@ export function ReaderPage() {
       <ReaderShell
         title={book.title}
         chapterTitle={chapters[currentChapter]?.title || ""}
+        ttsText={isPdf ? "" : htmlToSpeechText(content)}
         onBack={() => navigate("/")}
       >
         {loading ? (

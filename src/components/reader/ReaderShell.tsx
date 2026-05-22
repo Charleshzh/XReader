@@ -3,6 +3,7 @@ import { useReaderStore } from "@/stores/readerStore";
 import type { ChromeItem, ReaderChromeRow } from "@/types/reader";
 import { Button } from "@/components/ui/button";
 import { ReaderSearchPanel } from "@/components/reader/ReaderSearchPanel";
+import { useTts } from "@/hooks/useTts";
 import {
   ArrowLeft,
   Bookmark,
@@ -12,16 +13,19 @@ import {
   List,
   Search,
   Settings,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 
 interface ReaderShellProps {
   title: string;
   chapterTitle: string;
+  ttsText: string;
   onBack: () => void;
   children: ReactNode;
 }
 
-export function ReaderShell({ title, chapterTitle, onBack, children }: ReaderShellProps) {
+export function ReaderShell({ title, chapterTitle, ttsText, onBack, children }: ReaderShellProps) {
   const {
     currentChapter,
     chapters,
@@ -39,9 +43,15 @@ export function ReaderShell({ title, chapterTitle, onBack, children }: ReaderShe
     toggleAnnotations,
     endSession,
     showSearchPanel,
+    ttsToggleToken,
   } = useReaderStore();
 
   const isPaginated = settingsState.interaction.scrollMode === "paginated";
+  const { playing, play, stop, supported } = useTts(
+    ttsText,
+    settingsState.assist.ttsRate,
+    ttsToggleToken,
+  );
 
   const handleKeyDown = useCallback(
     (event: KeyboardEvent) => {
@@ -165,6 +175,14 @@ export function ReaderShell({ title, chapterTitle, onBack, children }: ReaderShe
           ) : null}
         </div>
         <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={playing ? stop : play}
+            disabled={!supported || !ttsText}
+          >
+            {playing ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+          </Button>
           <Button variant="ghost" size="icon" onClick={() => useReaderStore.setState({ showSearchPanel: true })}>
             <Search className="h-4 w-4" />
           </Button>

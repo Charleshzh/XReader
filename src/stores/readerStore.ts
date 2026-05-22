@@ -73,6 +73,7 @@ interface ReaderRuntimeState {
   sessionSeconds: number;
   sessionWords: number;
   isReading: boolean;
+  ttsToggleToken: number;
 }
 
 interface ReaderState extends ReaderRuntimeState {
@@ -99,6 +100,7 @@ interface ReaderState extends ReaderRuntimeState {
   setSearchMatches: (matches: ContentMatch[]) => void;
   jumpToSearchMatch: (index: number) => void;
   closeSearchPanel: () => void;
+  requestTtsToggle: () => void;
   loadSavedSettings: () => Promise<void>;
   addBookmark: (label: string) => Promise<void>;
   loadBookmarks: () => Promise<void>;
@@ -185,6 +187,7 @@ export function createInitialReaderRuntimeState(): ReaderRuntimeState {
     sessionSeconds: 0,
     sessionWords: 0,
     isReading: false,
+    ttsToggleToken: 0,
   };
 }
 
@@ -426,6 +429,9 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
       case "search":
         set({ showSearchPanel: true });
         break;
+      case "tts-toggle":
+        get().requestTtsToggle();
+        break;
       default:
         break;
     }
@@ -474,6 +480,11 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
     })),
 
   closeSearchPanel: () => set({ showSearchPanel: false }),
+
+  requestTtsToggle: () =>
+    set((state) => ({
+      ttsToggleToken: state.ttsToggleToken + 1,
+    })),
 
   loadSavedSettings: async () => {
     try {
