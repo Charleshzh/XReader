@@ -9,8 +9,8 @@ use std::collections::HashMap;
 pub mod book_info;
 pub mod chapter_content;
 pub mod chapter_list;
+pub mod explore;
 pub mod search;
-
 pub struct SourcePipeline {
     pub source: CompiledSource,
     http: SourceHttpClient,

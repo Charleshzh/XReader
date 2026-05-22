@@ -17,6 +17,13 @@ export interface SearchBookResult {
   book_url: string;
 }
 
+export interface ExploreBook {
+  name: string;
+  author: string;
+  cover_url: string;
+  book_url: string;
+}
+
 interface SourceState {
   sources: SourceItem[];
   loading: boolean;
@@ -27,6 +34,7 @@ interface SourceState {
   importSource: (jsonStr: string) => Promise<void>;
   deleteSource: (id: string) => Promise<void>;
   searchBooks: (sourceId: string, keyword: string, page?: number) => Promise<void>;
+  exploreBooks: (sourceId: string, page: number) => Promise<ExploreBook[]>;
 }
 
 export const useSourceStore = create<SourceState>((set, get) => ({
@@ -69,5 +77,13 @@ export const useSourceStore = create<SourceState>((set, get) => ({
       console.error("Search failed:", err);
       set({ searching: false });
     }
+  },
+
+  exploreBooks: async (sourceId: string, page: number) => {
+    const results = await invoke<ExploreBook[]>("explore_books", {
+      sourceId,
+      page,
+    });
+    return results;
   },
 }));

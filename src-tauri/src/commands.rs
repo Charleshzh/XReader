@@ -657,31 +657,82 @@ pub async fn search_books(
         .collect())
 }
 
+// ── Explore Books (Discover) ──
+
+#[derive(serde::Serialize)]
+pub struct ExploreBookResult {
+    pub name: String,
+    pub author: String,
+    pub cover_url: String,
+    pub book_url: String,
+}
+
+#[tauri::command]
+pub async fn explore_books(
+    state: State<'_, AppState>,
+    source_id: String,
+    page: u32,
+) -> Result<Vec<ExploreBookResult>, String> {
+    let json_str: String = {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        db.query_row(
+            "SELECT rule_json FROM book_sources WHERE id = ?1",
+            rusqlite::params![source_id],
+            |row| row.get(0),
+        )
+        .map_err(|e| e.to_string())?
+    };
+
+    let json_val: serde_json::Value =
+        serde_json::from_str(&json_str).map_err(|e| format!("Invalid source JSON: {}", e))?;
+    let compiled = crate::source::compile_source(&json_val).map_err(|e| e.to_string())?;
+    let mut pipeline = crate::source::SourcePipeline::new(compiled);
+
+    let results = pipeline.explore(page).await.map_err(|e| e.to_string())?;
+
+    Ok(results
+        .into_iter()
+        .map(|r| ExploreBookResult {
+            name: r.name,
+            author: r.author,
+            cover_url: r.cover_url,
+            book_url: r.book_url,
+        })
+        .collect())
+}
+
 // ── Cloud Sync ──
 
 #[tauri::command]
 pub async fn sync_now(state: State<'_, AppState>) -> Result<crate::sync::SyncResult, String> {
     let config = load_sync_config(&state).map_err(|e| e.to_string())?;
-    let backend = crate::sync::webdav::WebDavBackend::new(
-        config.url.clone(),
-        config.username.clone(),
-        config.password.clone(),
-    );
+    let engine = crate::sync::SyncEngine::new(config);
 
-    backend
-        .check_connection()
+    // Phase 1: read snapshot (hold DB lock briefly)
+    let snapshot = {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        engine.prepare_snapshot(&db).map_err(|e| e.to_string())?
+    };
+
+    // Phase 2: network I/O (no lock)
+    let remote_rows = engine
+        .sync_network(&snapshot)
         .await
-        .map_err(|e| format!("Connection failed: {}", e))?;
+        .map_err(|e| e.to_string())?;
 
-    // All sync operations at MVP level: just upload a backup
+    // Phase 3: apply merge (re-acquire lock)
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    let (uploaded, downloaded) =
+        crate::sync::SyncEngine::apply_merge(&db, &remote_rows).map_err(|e| e.to_string())?;
+
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap_or_default()
         .as_secs() as i64;
 
     Ok(crate::sync::SyncResult {
-        uploaded: 1,
-        downloaded: 0,
+        uploaded,
+        downloaded,
         conflicts: 0,
         errors: Vec::new(),
         timestamp: now,
@@ -730,4 +781,11 @@ pub fn load_reader_settings(state: State<AppState>) -> Result<String, String> {
     crate::db::queries::get_setting(&db, "reader_settings")
         .map_err(|e| e.to_string())
         .map(|v| v.unwrap_or_default())
+}
+
+// ── File Write (for export) ──
+
+#[tauri::command]
+pub fn write_file(path: String, content: String) -> Result<(), String> {
+    std::fs::write(&path, content).map_err(|e| format!("Failed to write file: {}", e))
 }

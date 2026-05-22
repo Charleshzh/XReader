@@ -5,6 +5,7 @@ pub mod webdav;
 
 use rusqlite::Connection;
 use serde::Serialize;
+use serde_json::Value;
 use std::time::{SystemTime, UNIX_EPOCH};
 use types::{SyncBackend, SyncConfig};
 
@@ -23,6 +24,55 @@ pub struct SyncResult {
     pub conflicts: usize,
     pub errors: Vec<String>,
     pub timestamp: i64,
+}
+
+/// Pre-read data needed for sync, so we can drop the DB lock before network I/O.
+pub(crate) struct SyncSnapshot {
+    local_data: Vec<(String, String)>, // (table, json_rows)
+    last_synced: Vec<(String, i64)>,   // (table, last_synced_at)
+    tables: Vec<String>,
+}
+
+impl SyncSnapshot {
+    fn read(db: &Connection) -> Result<Self, String> {
+        let mut last_synced = Vec::new();
+        let mut local_data = Vec::new();
+
+        for table in SYNC_TABLES {
+            let last: i64 = db
+                .query_row(
+                    "SELECT last_synced_at FROM sync_meta WHERE table_name = ?1",
+                    rusqlite::params![*table],
+                    |row| row.get(0),
+                )
+                .unwrap_or(0);
+
+            last_synced.push(((*table).to_string(), last));
+            let json = export_table_since(db, table, last)?;
+            local_data.push(((*table).to_string(), json));
+        }
+
+        Ok(Self {
+            local_data,
+            last_synced,
+            tables: SYNC_TABLES.iter().map(|s| (*s).to_string()).collect(),
+        })
+    }
+
+    fn last_synced_for(&self, table: &str) -> i64 {
+        self.last_synced
+            .iter()
+            .find(|(t, _)| t == table)
+            .map(|&(_, ts)| ts)
+            .unwrap_or(0)
+    }
+
+    fn local_data_for(&self, table: &str) -> Option<&str> {
+        self.local_data
+            .iter()
+            .find(|(t, _)| t == table)
+            .map(|(_, d)| d.as_str())
+    }
 }
 
 pub struct SyncEngine {
@@ -57,83 +107,84 @@ impl SyncEngine {
         self.config = config;
     }
 
-    pub async fn sync(&self, db: &Connection) -> Result<SyncResult, String> {
+    /// Phase 1: read snapshot (caller holds DB lock)
+    pub fn prepare_snapshot(&self, db: &Connection) -> Result<SyncSnapshot, String> {
+        SyncSnapshot::read(db)
+    }
+
+    /// Phase 2: network upload + download (no DB lock held)
+    pub async fn sync_network(
+        &self,
+        snapshot: &SyncSnapshot,
+    ) -> Result<Vec<(String, Vec<Value>)>, String> {
         let backend = self.backend.as_ref().ok_or("Sync not configured")?;
         backend.check_connection().await?;
 
+        // Upload local changes
+        for table in &snapshot.tables {
+            let data = snapshot.local_data_for(table).unwrap_or("[]");
+            if data != "[]" {
+                backend
+                    .upload(&format!("xreader/{}/latest.json", table), data.as_bytes())
+                    .await?;
+            }
+        }
+
+        // Download remote data
+        let mut remote_rows: Vec<(String, Vec<Value>)> = Vec::new();
+        for table in &snapshot.tables {
+            let path = format!("xreader/{}/latest.json", table);
+            match backend.download(&path).await {
+                Ok(data) => {
+                    let text = String::from_utf8_lossy(&data);
+                    if let Ok(rows) = serde_json::from_str::<Vec<Value>>(&text) {
+                        remote_rows.push((table.clone(), rows));
+                    }
+                }
+                Err(_) => {
+                    // Remote file may not exist yet — fine
+                }
+            }
+        }
+
+        Ok(remote_rows)
+    }
+
+    /// Phase 3: merge downloaded data into DB (caller holds DB lock)
+    pub fn apply_merge(
+        db: &Connection,
+        remote_rows: &[(String, Vec<Value>)],
+    ) -> Result<(usize, usize), String> {
+        let mut uploaded = 0usize;
+        let mut downloaded = 0usize;
+
+        for (table, rows) in remote_rows {
+            if !rows.is_empty() {
+                uploaded += 1; // each file counts as one upload
+            }
+            for row in rows {
+                if merge_row(db, table, row).is_ok() {
+                    downloaded += 1;
+                }
+            }
+        }
+
+        // Update sync meta for all synced tables
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap_or_default()
             .as_secs() as i64;
-        let mut result = SyncResult {
-            uploaded: 0,
-            downloaded: 0,
-            conflicts: 0,
-            errors: Vec::new(),
-            timestamp: now,
-        };
 
         for table in SYNC_TABLES {
-            match sync_table(backend.as_ref(), db, table).await {
-                Ok((up, down)) => {
-                    result.uploaded += up;
-                    result.downloaded += down;
-                }
-                Err(e) => result.errors.push(format!("{}: {}", table, e)),
-            }
-        }
-
-        Ok(result)
-    }
-}
-
-async fn sync_table(
-    backend: &dyn SyncBackend,
-    db: &Connection,
-    table: &str,
-) -> Result<(usize, usize), String> {
-    let local_last: Option<i64> = db
-        .query_row(
-            "SELECT last_synced_at FROM sync_meta WHERE table_name = ?1",
-            rusqlite::params![table],
-            |row| row.get(0),
-        )
-        .ok();
-
-    let remote_files = backend.list(&format!("xreader/{}", table)).await?;
-    let mut uploaded = 0usize;
-    let mut downloaded = 0usize;
-
-    let local_data = export_table_since(db, table, local_last.unwrap_or(0))?;
-    if !local_data.is_empty() {
-        backend
-            .upload(
-                &format!("xreader/{}/latest.json", table),
-                local_data.as_bytes(),
+            db.execute(
+                "INSERT OR REPLACE INTO sync_meta (table_name, last_synced_at) VALUES (?1, ?2)",
+                rusqlite::params![*table, now],
             )
-            .await?;
-        uploaded += 1;
-    }
-
-    for entry in &remote_files {
-        if entry.last_modified > local_last.unwrap_or(0) {
-            if let Ok(_data) = backend.download(&entry.path).await {
-                downloaded += 1;
-            }
+            .map_err(|e| e.to_string())?;
         }
+
+        Ok((uploaded, downloaded))
     }
-
-    let now = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_secs() as i64;
-    db.execute(
-        "INSERT OR REPLACE INTO sync_meta (table_name, last_synced_at) VALUES (?1, ?2)",
-        rusqlite::params![table, now],
-    )
-    .map_err(|e| e.to_string())?;
-
-    Ok((uploaded, downloaded))
 }
 
 fn export_table_since(db: &Connection, table: &str, since: i64) -> Result<String, String> {
@@ -154,4 +205,145 @@ fn export_table_since(db: &Connection, table: &str, since: i64) -> Result<String
         .collect();
 
     Ok(format!("[{}]", rows.join(",")))
+}
+
+fn merge_row(db: &Connection, table: &str, row: &Value) -> Result<(), String> {
+    match table {
+        "books" => {
+            let id = row["id"].as_str().unwrap_or("");
+            let remote_updated = row["updated_at"].as_i64().unwrap_or(0);
+
+            let local_updated: Option<i64> = db
+                .query_row(
+                    "SELECT updated_at FROM books WHERE id = ?1",
+                    rusqlite::params![id],
+                    |r| r.get(0),
+                )
+                .ok();
+
+            if local_updated.is_none_or(|lu| lu < remote_updated) {
+                db.execute(
+                    "INSERT OR REPLACE INTO books (id, title, author, format, updated_at)
+                     VALUES (?1, ?2, ?3, ?4, ?5)",
+                    rusqlite::params![
+                        id,
+                        row["title"].as_str().unwrap_or(""),
+                        row["author"].as_str().unwrap_or(""),
+                        row["format"].as_str().unwrap_or(""),
+                        remote_updated,
+                    ],
+                )
+                .map_err(|e| e.to_string())?;
+            }
+        }
+        "reading_progress" => {
+            let book_id = row["book_id"].as_str().unwrap_or("");
+            let remote_updated = row["updated_at"].as_i64().unwrap_or(0);
+
+            let local_updated: Option<i64> = db
+                .query_row(
+                    "SELECT updated_at FROM reading_progress WHERE book_id = ?1",
+                    rusqlite::params![book_id],
+                    |r| r.get(0),
+                )
+                .ok();
+
+            if local_updated.is_none_or(|lu| lu < remote_updated) {
+                db.execute(
+                    "INSERT OR REPLACE INTO reading_progress (book_id, chapter_index, position, updated_at)
+                     VALUES (?1, ?2, ?3, ?4)",
+                    rusqlite::params![
+                        book_id,
+                        row["chapter_index"].as_i64().unwrap_or(0),
+                        row["position"].as_f64().unwrap_or(0.0),
+                        remote_updated,
+                    ],
+                )
+                .map_err(|e| e.to_string())?;
+            }
+        }
+        "bookmarks" => {
+            let id = row["id"].as_str().unwrap_or("");
+            let remote_created = row["created_at"].as_i64().unwrap_or(0);
+
+            let exists: bool = db
+                .query_row(
+                    "SELECT COUNT(*) > 0 FROM bookmarks WHERE id = ?1",
+                    rusqlite::params![id],
+                    |r| r.get(0),
+                )
+                .unwrap_or(false);
+
+            if !exists {
+                db.execute(
+                    "INSERT OR IGNORE INTO bookmarks (id, book_id, chapter_index, position, label, created_at)
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                    rusqlite::params![
+                        id,
+                        row["book_id"].as_str().unwrap_or(""),
+                        row["chapter_index"].as_i64().unwrap_or(0),
+                        row["position"].as_f64().unwrap_or(0.0),
+                        row["label"].as_str().unwrap_or(""),
+                        remote_created,
+                    ],
+                )
+                .map_err(|e| e.to_string())?;
+            }
+        }
+        "annotations" => {
+            let id = row["id"].as_str().unwrap_or("");
+            let remote_updated = row["updated_at"].as_i64().unwrap_or(0);
+
+            let local_updated: Option<i64> = db
+                .query_row(
+                    "SELECT updated_at FROM annotations WHERE id = ?1",
+                    rusqlite::params![id],
+                    |r| r.get(0),
+                )
+                .ok();
+
+            if local_updated.is_none_or(|lu| lu < remote_updated) {
+                db.execute(
+                    "INSERT OR REPLACE INTO annotations (id, book_id, text, note, updated_at)
+                     VALUES (?1, ?2, ?3, ?4, ?5)",
+                    rusqlite::params![
+                        id,
+                        row["book_id"].as_str().unwrap_or(""),
+                        row["text"].as_str().unwrap_or(""),
+                        row["note"].as_str().unwrap_or(""),
+                        remote_updated,
+                    ],
+                )
+                .map_err(|e| e.to_string())?;
+            }
+        }
+        "book_sources" => {
+            let id = row["id"].as_str().unwrap_or("");
+            let remote_updated = row["updated_at"].as_i64().unwrap_or(0);
+
+            let local_updated: Option<i64> = db
+                .query_row(
+                    "SELECT updated_at FROM book_sources WHERE id = ?1",
+                    rusqlite::params![id],
+                    |r| r.get(0),
+                )
+                .ok();
+
+            if local_updated.is_none_or(|lu| lu < remote_updated) {
+                db.execute(
+                    "INSERT OR REPLACE INTO book_sources (id, name, base_url, updated_at)
+                     VALUES (?1, ?2, ?3, ?4)",
+                    rusqlite::params![
+                        id,
+                        row["name"].as_str().unwrap_or(""),
+                        row["base_url"].as_str().unwrap_or(""),
+                        remote_updated,
+                    ],
+                )
+                .map_err(|e| e.to_string())?;
+            }
+        }
+        _ => {}
+    }
+    Ok(())
 }

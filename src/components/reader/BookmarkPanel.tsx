@@ -1,16 +1,39 @@
 import { useState } from "react";
 import { useReaderStore } from "@/stores/readerStore";
 import { Button } from "@/components/ui/button";
-import { X, BookmarkPlus, Trash2 } from "lucide-react";
+import { X, BookmarkPlus, Trash2, Download } from "lucide-react";
+import { save } from "@tauri-apps/plugin-dialog";
+import { invoke } from "@tauri-apps/api/core";
 
 export function BookmarkPanel() {
-  const { bookmarks, addBookmark, deleteBookmark, toggleBookmarks, loadChapter } = useReaderStore();
+  const { bookmarks, book, chapters, addBookmark, deleteBookmark, toggleBookmarks, loadChapter } =
+    useReaderStore();
   const [label, setLabel] = useState("");
 
   const handleAdd = () => {
     const name = label.trim() || `书签 ${bookmarks.length + 1}`;
     addBookmark(name);
     setLabel("");
+  };
+
+  const handleExport = async () => {
+    const title = book?.title || "未知书名";
+    const date = new Date().toISOString().slice(0, 10);
+    const path = await save({
+      defaultPath: `书签_${title}_${date}.md`,
+      filters: [{ name: "Markdown", extensions: ["md"] }],
+    });
+    if (!path) return;
+
+    let md = `# 书签 — 《${title}》\n\n`;
+    md += `导出日期: ${date}\n\n---\n\n`;
+    for (const bm of bookmarks) {
+      const chapterTitle = chapters[bm.chapter_index]?.title || `第${bm.chapter_index + 1}章`;
+      md += `- **${chapterTitle}**: ${bm.label}\n`;
+    }
+    md += `\n共 ${bookmarks.length} 个书签\n`;
+
+    await invoke("write_file", { path, content: md });
   };
 
   return (
@@ -22,7 +45,6 @@ export function BookmarkPanel() {
         </Button>
       </div>
 
-      {/* Add bookmark */}
       <div className="flex gap-2 border-b p-3">
         <input
           type="text"
@@ -37,7 +59,6 @@ export function BookmarkPanel() {
         </Button>
       </div>
 
-      {/* Bookmark list */}
       <div className="flex-1 overflow-auto">
         {bookmarks.length === 0 ? (
           <p className="p-4 text-center text-xs text-muted-foreground">暂无书签</p>
@@ -71,8 +92,11 @@ export function BookmarkPanel() {
       </div>
 
       {bookmarks.length > 0 && (
-        <div className="border-t px-4 py-2 text-xs text-muted-foreground">
-          共 {bookmarks.length} 个书签
+        <div className="flex items-center justify-between border-t px-4 py-2">
+          <span className="text-xs text-muted-foreground">共 {bookmarks.length} 个书签</span>
+          <Button variant="ghost" size="sm" onClick={handleExport}>
+            <Download className="mr-1 h-3 w-3" /> 导出
+          </Button>
         </div>
       )}
     </div>

@@ -73,11 +73,13 @@ pub fn run() {
             commands::list_book_sources,
             commands::delete_book_source,
             commands::search_books,
+            commands::explore_books,
             commands::sync_now,
             commands::configure_sync,
             commands::get_sync_config,
             commands::save_reader_settings,
             commands::load_reader_settings,
+            commands::write_file,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

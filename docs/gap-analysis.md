@@ -2,8 +2,7 @@
 
 **日期**: 2026-05-22  
 **基准**: `docs/XReader_Novel_Reader_Plan.md` Phase 1-7  
-**实际完成**: 24 commits, Phase 1-7 MVP 交付
-
+**实际完成**: 26 commits, Phase 1-7 MVP 交付 + 5 UX 改进 (a57a26c)
 ---
 
 ## 1. 各阶段完成度

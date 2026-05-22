@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { useReaderStore } from "@/stores/readerStore";
 import { Button } from "@/components/ui/button";
-import { X, Trash2, Highlighter } from "lucide-react";
+import { X, Trash2, Highlighter, Download } from "lucide-react";
+import { save } from "@tauri-apps/plugin-dialog";
+import { invoke } from "@tauri-apps/api/core";
 
 const COLORS = [
   { key: "yellow", class: "bg-yellow-200 dark:bg-yellow-800", label: "黄" },
@@ -15,6 +17,8 @@ export function AnnotationPanel() {
   const {
     annotations,
     selectedAnnotation,
+    book,
+    chapters,
     updateAnnotationNote,
     deleteAnnotation,
     selectAnnotation,
@@ -32,6 +36,31 @@ export function AnnotationPanel() {
     if (selectedAnnotation) {
       updateAnnotationNote(selectedAnnotation.id, editNote);
     }
+  };
+
+  const handleExport = async () => {
+    const title = book?.title || "未知书名";
+    const date = new Date().toISOString().slice(0, 10);
+    const path = await save({
+      defaultPath: `笔记_${title}_${date}.md`,
+      filters: [{ name: "Markdown", extensions: ["md"] }],
+    });
+    if (!path) return;
+
+    let md = `# 笔记 — 《${title}》\n\n`;
+    md += `导出日期: ${date}\n\n---\n\n`;
+    for (const a of annotations) {
+      const chapterTitle = chapters[a.chapter_index]?.title || `第${a.chapter_index + 1}章`;
+      md += `### ${chapterTitle}\n\n`;
+      md += `> ${a.text}\n\n`;
+      if (a.note) {
+        md += `${a.note}\n\n`;
+      }
+      md += `---\n\n`;
+    }
+    md += `共 ${annotations.length} 条笔记\n`;
+
+    await invoke("write_file", { path, content: md });
   };
 
   return (
@@ -105,8 +134,11 @@ export function AnnotationPanel() {
       )}
 
       {annotations.length > 0 && (
-        <div className="border-t px-4 py-2 text-xs text-muted-foreground">
-          {annotations.length} 条笔记
+        <div className="flex items-center justify-between border-t px-4 py-2">
+          <span className="text-xs text-muted-foreground">{annotations.length} 条笔记</span>
+          <Button variant="ghost" size="sm" onClick={handleExport}>
+            <Download className="mr-1 h-3 w-3" /> 导出
+          </Button>
         </div>
       )}
     </div>
