@@ -1,5 +1,6 @@
-import { useRef, useEffect, useCallback, useMemo } from "react";
+import { useRef, useEffect, useCallback, useMemo, useState } from "react";
 import { highlightAnnotations } from "@/lib/highlight";
+import { clampPageIndex, pageIndexFromFraction } from "@/lib/paginatedLayout";
 import { useReaderStore } from "@/stores/readerStore";
 
 interface HtmlContentViewProps {
@@ -9,15 +10,19 @@ interface HtmlContentViewProps {
 export function HtmlContentView({ content }: HtmlContentViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const articleRef = useRef<HTMLElement>(null);
+  const [pageWidth, setPageWidth] = useState(0);
   const {
     settingsState,
     activeStyle,
     annotations,
     currentChapter,
     currentPosition,
+    currentPage,
+    totalPages,
     saveProgress,
-    nextChapter,
-    prevChapter,
+    setPageState,
+    nextPage,
+    prevPage,
   } = useReaderStore();
 
   const chapterAnnotations = useMemo(
@@ -44,7 +49,7 @@ export function HtmlContentView({ content }: HtmlContentViewProps) {
     paragraphSpacing,
     paragraphIndent,
   } = activeStyle;
-  const scrollMode = settingsState.interaction.scrollMode;
+  const isPaginated = settingsState.interaction.scrollMode === "paginated";
 
   const handleScroll = useCallback(() => {
     const element = containerRef.current;
@@ -68,7 +73,7 @@ export function HtmlContentView({ content }: HtmlContentViewProps) {
   useEffect(() => {
     const element = containerRef.current;
     if (!element) return;
-    if (scrollMode !== "scroll") {
+    if (isPaginated) {
       element.scrollTop = 0;
       return;
     }
@@ -78,11 +83,11 @@ export function HtmlContentView({ content }: HtmlContentViewProps) {
     if (Math.abs(element.scrollTop - nextScrollTop) > 2) {
       element.scrollTop = nextScrollTop;
     }
-  }, [content, currentPosition, scrollMode]);
+  }, [content, currentPosition, isPaginated]);
 
   useEffect(() => {
     const element = containerRef.current;
-    if (!element || scrollMode !== "scroll") return;
+    if (!element || isPaginated) return;
     let timer: ReturnType<typeof setTimeout>;
     const onScroll = () => {
       clearTimeout(timer);
@@ -93,20 +98,79 @@ export function HtmlContentView({ content }: HtmlContentViewProps) {
       element.removeEventListener("scroll", onScroll);
       clearTimeout(timer);
     };
-  }, [handleScroll, scrollMode]);
+  }, [handleScroll, isPaginated]);
+
+  useEffect(() => {
+    const element = containerRef.current;
+    if (!element || !isPaginated) return;
+
+    const updatePageWidth = () => {
+      setPageWidth(element.clientWidth || 0);
+    };
+
+    updatePageWidth();
+    const observer = new ResizeObserver(updatePageWidth);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [highlightedContent, isPaginated]);
+
+  useEffect(() => {
+    if (!isPaginated || pageWidth <= 0) return;
+    const element = containerRef.current;
+    const article = articleRef.current;
+    if (!element || !article) return;
+
+    const frame = window.requestAnimationFrame(() => {
+      const pages = Math.max(1, Math.ceil(article.scrollWidth / pageWidth));
+      const restoredPage = pageIndexFromFraction(currentPosition, pages);
+      const nextLeft = restoredPage * pageWidth;
+      if (Math.abs(element.scrollLeft - nextLeft) > 2) {
+        element.scrollLeft = nextLeft;
+      }
+      const state = useReaderStore.getState();
+      if (state.currentPage !== restoredPage || state.totalPages !== pages) {
+        useReaderStore.setState({ currentPage: restoredPage, totalPages: pages });
+      }
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [highlightedContent, currentPosition, isPaginated, pageWidth]);
+
+  const goToPage = useCallback(
+    (page: number) => {
+      const element = containerRef.current;
+      if (!element) return;
+      const next = clampPageIndex(page, totalPages);
+      element.scrollTo({ left: next * pageWidth, behavior: "smooth" });
+      setPageState(next, totalPages);
+    },
+    [pageWidth, setPageState, totalPages],
+  );
+
+  useEffect(() => {
+    if (!isPaginated || pageWidth <= 0) return;
+    const element = containerRef.current;
+    if (!element) return;
+    const desiredLeft = currentPage * pageWidth;
+    if (Math.abs(element.scrollLeft - desiredLeft) > 2) {
+      element.scrollLeft = desiredLeft;
+    }
+  }, [currentPage, isPaginated, pageWidth]);
 
   const handleContentClick = useCallback(
     (event: React.MouseEvent) => {
-      if (scrollMode !== "paginated") return;
+      if (!isPaginated) return;
       const rect = event.currentTarget.getBoundingClientRect();
       const x = event.clientX - rect.left;
       if (x < rect.width * 0.3) {
-        void prevChapter();
+        void prevPage();
       } else if (x > rect.width * 0.7) {
-        void nextChapter();
+        void nextPage();
+      } else {
+        goToPage(currentPage);
       }
     },
-    [scrollMode, prevChapter, nextChapter],
+    [currentPage, goToPage, isPaginated, nextPage, prevPage],
   );
 
   return (
@@ -114,7 +178,7 @@ export function HtmlContentView({ content }: HtmlContentViewProps) {
       ref={containerRef}
       className="relative h-full select-none"
       style={{
-        overflowY: scrollMode === "scroll" ? "auto" : "hidden",
+        overflowY: isPaginated ? "hidden" : "auto",
         overflowX: "hidden",
       }}
       onClick={handleContentClick}
@@ -131,6 +195,10 @@ export function HtmlContentView({ content }: HtmlContentViewProps) {
             fontFamily,
             fontWeight,
             letterSpacing: `${letterSpacing}px`,
+            columnWidth: isPaginated && pageWidth > 0 ? `${pageWidth}px` : undefined,
+            columnGap: isPaginated ? "0px" : undefined,
+            maxWidth: isPaginated ? "none" : undefined,
+            height: isPaginated ? "100%" : undefined,
           } as React.CSSProperties
         }
         dangerouslySetInnerHTML={{ __html: highlightedContent }}

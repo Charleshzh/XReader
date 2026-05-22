@@ -15,6 +15,8 @@ import {
 } from "@/types/reader";
 import { migrateReaderSettings } from "@/lib/migrateReaderSettings";
 
+import { clampPageIndex, toChapterFraction } from "@/lib/paginatedLayout";
+
 export interface BookmarkItem {
   id: string;
   book_id: string;
@@ -48,6 +50,8 @@ interface ReaderRuntimeState {
   chapters: ChapterInfo[];
   currentChapter: number;
   currentPosition: number;
+  currentPage: number;
+  totalPages: number;
   content: string;
   loading: boolean;
   settingsState: ReaderSettingsState;
@@ -70,6 +74,9 @@ interface ReaderState extends ReaderRuntimeState {
   nextChapter: () => Promise<void>;
   prevChapter: () => Promise<void>;
   saveProgress: (chapterIndex: number, position: number) => Promise<void>;
+  setPageState: (page: number, totalPages: number) => void;
+  nextPage: () => Promise<void>;
+  prevPage: () => Promise<void>;
   updateSettingsState: (next: ReaderSettingsState) => void;
   replaceSettingsState: (next: ReaderSettingsState) => void;
   patchActiveStyle: (partial: Partial<ReaderStylePreset>) => void;
@@ -146,6 +153,8 @@ export function createInitialReaderRuntimeState(): ReaderRuntimeState {
     chapters: [],
     currentChapter: 0,
     currentPosition: 0,
+    currentPage: 0,
+    totalPages: 1,
     content: "",
     loading: false,
     settingsState,
@@ -172,6 +181,8 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
       loading: true,
       currentChapter: 0,
       currentPosition: 0,
+      currentPage: 0,
+      totalPages: 1,
       bookmarks: [],
       annotations: [],
     });
@@ -201,7 +212,13 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
   loadChapter: async (index, position = 0) => {
     const { book } = get();
     if (!book) return;
-    set({ loading: true, currentChapter: index, currentPosition: position });
+    set({
+      loading: true,
+      currentChapter: index,
+      currentPosition: position,
+      currentPage: 0,
+      totalPages: 1,
+    });
     try {
       const content = await invoke<string>("get_chapter_content", {
         bookId: book.id,
@@ -245,6 +262,35 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
       });
     } catch (err) {
       console.error("Failed to save progress:", err);
+    }
+  },
+
+  setPageState: (page, totalPages) => {
+    const nextTotalPages = Math.max(1, totalPages);
+    const nextPage = clampPageIndex(page, nextTotalPages);
+    set({ currentPage: nextPage, totalPages: nextTotalPages });
+    void get().saveProgress(get().currentChapter, toChapterFraction(nextPage, nextTotalPages));
+  },
+
+  nextPage: async () => {
+    const { currentPage, totalPages, currentChapter, chapters } = get();
+    if (currentPage + 1 < totalPages) {
+      get().setPageState(currentPage + 1, totalPages);
+      return;
+    }
+    if (currentChapter < chapters.length - 1) {
+      await get().loadChapter(currentChapter + 1, 0);
+    }
+  },
+
+  prevPage: async () => {
+    const { currentPage, totalPages, currentChapter } = get();
+    if (currentPage > 0) {
+      get().setPageState(currentPage - 1, totalPages);
+      return;
+    }
+    if (currentChapter > 0) {
+      await get().loadChapter(currentChapter - 1, 1);
     }
   },
 

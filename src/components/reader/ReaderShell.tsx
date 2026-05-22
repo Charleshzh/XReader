@@ -23,10 +23,14 @@ export function ReaderShell({ title, chapterTitle, onBack, children }: ReaderShe
   const {
     currentChapter,
     chapters,
+    currentPage,
+    totalPages,
     settingsState,
     activeStyle,
     nextChapter,
     prevChapter,
+    nextPage,
+    prevPage,
     toggleToc,
     toggleSettings,
     toggleBookmarks,
@@ -39,16 +43,16 @@ export function ReaderShell({ title, chapterTitle, onBack, children }: ReaderShe
   const handleKeyDown = useCallback(
     (event: KeyboardEvent) => {
       if (event.key === "ArrowRight" || event.key === "ArrowDown") {
-        if (isPaginated && currentChapter < chapters.length - 1) {
-          void nextChapter();
+        if (isPaginated) {
+          void nextPage();
         }
       } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
-        if (isPaginated && currentChapter > 0) {
-          void prevChapter();
+        if (isPaginated) {
+          void prevPage();
         }
       }
     },
-    [isPaginated, currentChapter, chapters.length, nextChapter, prevChapter],
+    [isPaginated, nextPage, prevPage],
   );
 
   useEffect(() => {
@@ -95,12 +99,14 @@ export function ReaderShell({ title, chapterTitle, onBack, children }: ReaderShe
             minute: "2-digit",
           });
         case "progress":
-          return `${currentChapter + 1}/${chapters.length}`;
+          return isPaginated
+            ? `第 ${currentPage + 1} / ${totalPages} 页`
+            : `${currentChapter + 1}/${chapters.length}`;
         default:
           return "";
       }
     },
-    [chapterTitle, chapters.length, currentChapter, title],
+    [chapterTitle, chapters.length, currentChapter, currentPage, isPaginated, title, totalPages],
   );
 
   const hasChromeContent = (row: ReaderChromeRow) =>
@@ -117,6 +123,15 @@ export function ReaderShell({ title, chapterTitle, onBack, children }: ReaderShe
   );
 
   const showToolbarTitle = activeStyle.titleMode !== "hidden";
+  const prevDisabled = isPaginated
+    ? currentChapter === 0 && currentPage === 0
+    : currentChapter === 0;
+  const nextDisabled = isPaginated
+    ? currentChapter >= chapters.length - 1 && currentPage >= totalPages - 1
+    : currentChapter >= chapters.length - 1;
+  const pageLabel = isPaginated
+    ? `第 ${currentPage + 1} / ${totalPages} 页`
+    : `${currentChapter + 1} / ${chapters.length}`;
 
   return (
     <div className={`flex h-full flex-col ${themeClass}`}>
@@ -161,20 +176,23 @@ export function ReaderShell({ title, chapterTitle, onBack, children }: ReaderShe
           ? renderChromeRow(activeStyle.footer, "border-b border-border/50")
           : null}
         <div className="flex h-10 items-center justify-between px-4 text-xs text-muted-foreground">
-          <Button variant="ghost" size="sm" onClick={prevChapter} disabled={currentChapter === 0}>
-            <ChevronLeft className="mr-1 h-3 w-3" />
-            上一章
-          </Button>
-          <span>
-            {currentChapter + 1} / {chapters.length}
-          </span>
           <Button
             variant="ghost"
             size="sm"
-            onClick={nextChapter}
-            disabled={currentChapter >= chapters.length - 1}
+            onClick={isPaginated ? prevPage : prevChapter}
+            disabled={prevDisabled}
           >
-            下一章
+            <ChevronLeft className="mr-1 h-3 w-3" />
+            {isPaginated ? "上一页" : "上一章"}
+          </Button>
+          <span>{pageLabel}</span>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={isPaginated ? nextPage : nextChapter}
+            disabled={nextDisabled}
+          >
+            {isPaginated ? "下一页" : "下一章"}
             <ChevronRight className="ml-1 h-3 w-3" />
           </Button>
         </div>
