@@ -1,16 +1,12 @@
 //! XPath Evaluator — evaluates xpath.* rules using sxd-xpath.
 
+use super::{EvalContext, EvalResult};
 use crate::source::types::*;
 use scraper::Html;
 use sxd_document::parser;
 use sxd_xpath::{Context as XPathContext, Factory, Value};
-use super::{EvalContext, EvalResult};
 
-pub fn evaluate(
-    html: &Html,
-    rule: &CompiledRule,
-    _context: &EvalContext,
-) -> EvalResult {
+pub fn evaluate(html: &Html, rule: &CompiledRule, _context: &EvalContext) -> EvalResult {
     if rule.segments.is_empty() {
         return EvalResult::Empty;
     }
@@ -64,9 +60,7 @@ fn xpath_value_to_result(value: &Value, attr: &str) -> EvalResult {
 
             match attr {
                 "text" | "textNodes" | "ownText" => {
-                    let text: String = ordered.iter()
-                        .map(|n| n.string_value())
-                        .collect();
+                    let text: String = ordered.iter().map(|n| n.string_value()).collect();
                     let trimmed = text.trim().to_string();
                     if trimmed.is_empty() {
                         EvalResult::Empty
@@ -75,7 +69,9 @@ fn xpath_value_to_result(value: &Value, attr: &str) -> EvalResult {
                     }
                 }
                 "html" | "all" => {
-                    let html = ordered.iter().next()
+                    let html = ordered
+                        .iter()
+                        .next()
                         .map(|n| n.string_value())
                         .unwrap_or_default();
                     if html.trim().is_empty() {

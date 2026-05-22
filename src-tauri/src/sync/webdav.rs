@@ -28,10 +28,8 @@ impl WebDavBackend {
 
     fn auth_header(&self) -> String {
         let creds = format!("{}:{}", self.username, self.password);
-        let encoded = base64::Engine::encode(
-            &base64::engine::general_purpose::STANDARD,
-            creds.as_bytes(),
-        );
+        let encoded =
+            base64::Engine::encode(&base64::engine::general_purpose::STANDARD, creds.as_bytes());
         format!("Basic {}", encoded)
     }
 
@@ -149,7 +147,10 @@ impl SyncBackend for WebDavBackend {
         if resp.status().is_success() || resp.status().as_u16() == 207 {
             Ok(())
         } else {
-            Err(format!("Connection failed: HTTP {} — check URL and credentials", resp.status()))
+            Err(format!(
+                "Connection failed: HTTP {} — check URL and credentials",
+                resp.status()
+            ))
         }
     }
 }
@@ -209,7 +210,11 @@ fn parse_propfind_response(xml: &str, base_url: &str) -> Result<Vec<SyncEntry>, 
         if !path.is_empty() && !path.ends_with('/') {
             let timestamp = parse_http_date(&current_modified);
             let size: u64 = current_size.parse().unwrap_or(0);
-            entries.push(SyncEntry { path, last_modified: timestamp, size });
+            entries.push(SyncEntry {
+                path,
+                last_modified: timestamp,
+                size,
+            });
         }
     }
 

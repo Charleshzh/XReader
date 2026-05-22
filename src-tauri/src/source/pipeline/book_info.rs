@@ -38,7 +38,10 @@ impl SourcePipeline {
         Ok(BookInfo {
             name: eval_field(&html, &name_rule),
             author: eval_opt(&html, &author_rule),
-            cover_url: evaluator::template::resolve_url(&self.source.base_url, &eval_opt(&html, &cover_url_rule)),
+            cover_url: evaluator::template::resolve_url(
+                &self.source.base_url,
+                &eval_opt(&html, &cover_url_rule),
+            ),
             intro: eval_opt(&html, &intro_rule),
             kind: eval_opt(&html, &kind_rule),
             word_count: eval_opt(&html, &word_count_rule),

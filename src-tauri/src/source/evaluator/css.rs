@@ -1,16 +1,12 @@
 //! CSS Evaluator: evaluates class/id/tag/text/children/css rules using the scraper crate.
 
+use super::{EvalContext, EvalResult};
 use crate::source::compiler::compile_rule;
 use crate::source::types::*;
 use scraper::{ElementRef, Html, Selector};
-use super::{EvalContext, EvalResult};
 
 /// Evaluate a CompiledRule against HTML using CSS selectors.
-pub fn evaluate(
-    html: &Html,
-    rule: &CompiledRule,
-    _context: &EvalContext,
-) -> EvalResult {
+pub fn evaluate(html: &Html, rule: &CompiledRule, _context: &EvalContext) -> EvalResult {
     if rule.segments.is_empty() {
         return EvalResult::Empty;
     }
@@ -71,9 +67,7 @@ fn select_sub<'a>(parents: &[ElementRef<'a>], seg: &RuleSegment) -> Vec<ElementR
 
 fn select_on_element<'a>(el: ElementRef<'a>, seg: &RuleSegment) -> Vec<ElementRef<'a>> {
     match seg.selector_type.as_str() {
-        "class" => {
-            select_on_element_by(el, &format!(".{}", seg.value), seg.index)
-        }
+        "class" => select_on_element_by(el, &format!(".{}", seg.value), seg.index),
         "id" => select_on_element_by(el, &format!("#{}", seg.value), seg.index),
         "tag" => select_on_element_by(el, &seg.value, seg.index),
         "text" => {
@@ -83,9 +77,8 @@ fn select_on_element<'a>(el: ElementRef<'a>, seg: &RuleSegment) -> Vec<ElementRe
         "css" => select_on_element_by(el, &seg.value, seg.index),
         "children" => {
             // Select all direct children
-            let mut children: Vec<ElementRef> = el.children().filter_map(|c| {
-                ElementRef::wrap(c)
-            }).collect();
+            let mut children: Vec<ElementRef> =
+                el.children().filter_map(|c| ElementRef::wrap(c)).collect();
             if let Some(idx) = seg.index {
                 children = children.into_iter().skip(idx).take(1).collect();
             }
@@ -143,10 +136,7 @@ fn extract_attr_from_elements(elements: &[ElementRef], attr: &str) -> EvalResult
         }
         "textNodes" => {
             // Pure text nodes only
-            let text: String = elements
-                .iter()
-                .flat_map(|e| e.text())
-                .collect();
+            let text: String = elements.iter().flat_map(|e| e.text()).collect();
             if text.trim().is_empty() {
                 EvalResult::Empty
             } else {
@@ -236,9 +226,8 @@ mod tests {
 
     #[test]
     fn test_chained_rule() {
-        let html = Html::parse_fragment(
-            r#"<div class="item"><a href="/book/1">Book Name</a></div>"#,
-        );
+        let html =
+            Html::parse_fragment(r#"<div class="item"><a href="/book/1">Book Name</a></div>"#);
         let rule = compile_rule("class.item@tag.a@text");
         let ctx = EvalContext::default();
         let result = evaluate(&html, &rule.alternatives[0], &ctx);
@@ -278,9 +267,7 @@ mod tests {
 
     #[test]
     fn test_html_extract() {
-        let html = Html::parse_fragment(
-            r#"<div class="content"><p>Hello</p><p>World</p></div>"#,
-        );
+        let html = Html::parse_fragment(r#"<div class="content"><p>Hello</p><p>World</p></div>"#);
         let rule = compile_rule("class.content@html");
         let ctx = EvalContext::default();
         let result = evaluate(&html, &rule.alternatives[0], &ctx);

@@ -22,7 +22,8 @@ impl SourcePipeline {
         let url = self.search_url(keyword, page);
         let html = self.fetch_html(&url).await?;
 
-        let book_items = evaluator::evaluate_rule(&html, &self.source.search_book_list, &self.context);
+        let book_items =
+            evaluator::evaluate_rule(&html, &self.source.search_book_list, &self.context);
         let values = book_items.into_values();
         let mut results = Vec::new();
 

@@ -34,7 +34,11 @@ impl SourceHttpClient {
     }
 
     /// Fetch a URL and return the response body as a string, with encoding detection.
-    pub async fn fetch(&self, url: &str, extra_headers: Option<&HashMap<String, String>>) -> Result<String, String> {
+    pub async fn fetch(
+        &self,
+        url: &str,
+        extra_headers: Option<&HashMap<String, String>>,
+    ) -> Result<String, String> {
         let mut req = self.client.get(url);
 
         // Apply extra headers from book source config
@@ -56,7 +60,10 @@ impl SourceHttpClient {
             return Err(format!("HTTP {} for {}", status, url));
         }
 
-        let bytes = resp.bytes().await.map_err(|e| format!("Read error: {}", e))?;
+        let bytes = resp
+            .bytes()
+            .await
+            .map_err(|e| format!("Read error: {}", e))?;
 
         // Detect encoding
         decode_bytes(&bytes)
@@ -95,11 +102,14 @@ fn decode_bytes(bytes: &[u8]) -> Result<String, String> {
 fn detect_encoding_from_meta(html_head: &str) -> Option<String> {
     // Look for <meta charset="..."> or <meta http-equiv="Content-Type" content="...;charset=...">
     let lower = html_head.to_lowercase();
-    
+
     // <meta charset="gbk">
     if let Some(pos) = lower.find("charset=") {
         let rest = &lower[pos + 8..];
-        let enc: String = rest.chars().take_while(|c| c.is_alphanumeric() || *c == '-').collect();
+        let enc: String = rest
+            .chars()
+            .take_while(|c| c.is_alphanumeric() || *c == '-')
+            .collect();
         if !enc.is_empty() {
             return Some(enc);
         }

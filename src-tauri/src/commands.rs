@@ -1,11 +1,11 @@
 use crate::book;
 use crate::db;
+use crate::sync::types::SyncBackend;
 use crate::AppState;
 use rusqlite::Connection;
 use std::fs;
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
-use crate::sync::types::SyncBackend;
 use tauri::State;
 
 /// Metadata returned to frontend after importing a book.
@@ -555,10 +555,7 @@ pub fn import_book_source(
         .as_str()
         .unwrap_or("Unnamed Source")
         .to_string();
-    let base_url = json_val["bookSourceUrl"]
-        .as_str()
-        .unwrap_or("")
-        .to_string();
+    let base_url = json_val["bookSourceUrl"].as_str().unwrap_or("").to_string();
 
     db.execute(
         "INSERT INTO book_sources (id, name, base_url, enabled, rule_json, created_at, updated_at)
@@ -577,9 +574,7 @@ pub fn import_book_source(
 }
 
 #[tauri::command]
-pub fn list_book_sources(
-    state: State<AppState>,
-) -> Result<Vec<SourceListItem>, String> {
+pub fn list_book_sources(state: State<AppState>) -> Result<Vec<SourceListItem>, String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
     let mut stmt = db
         .prepare(
@@ -599,14 +594,18 @@ pub fn list_book_sources(
         })
         .map_err(|e| e.to_string())?;
 
-    rows.collect::<Result<Vec<_>, _>>().map_err(|e| e.to_string())
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub fn delete_book_source(state: State<AppState>, id: String) -> Result<(), String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
-    db.execute("DELETE FROM book_sources WHERE id = ?1", rusqlite::params![id])
-        .map_err(|e| e.to_string())?;
+    db.execute(
+        "DELETE FROM book_sources WHERE id = ?1",
+        rusqlite::params![id],
+    )
+    .map_err(|e| e.to_string())?;
     Ok(())
 }
 
@@ -641,7 +640,10 @@ pub async fn search_books(
     let compiled = crate::source::compile_source(&json_val).map_err(|e| e.to_string())?;
     let mut pipeline = crate::source::SourcePipeline::new(compiled);
 
-    let results = pipeline.search(&keyword, page).await.map_err(|e| e.to_string())?;
+    let results = pipeline
+        .search(&keyword, page)
+        .await
+        .map_err(|e| e.to_string())?;
 
     Ok(results
         .into_iter()
@@ -666,7 +668,10 @@ pub async fn sync_now(state: State<'_, AppState>) -> Result<crate::sync::SyncRes
         config.password.clone(),
     );
 
-    backend.check_connection().await.map_err(|e| format!("Connection failed: {}", e))?;
+    backend
+        .check_connection()
+        .await
+        .map_err(|e| format!("Connection failed: {}", e))?;
 
     // All sync operations at MVP level: just upload a backup
     let now = std::time::SystemTime::now()

@@ -1,16 +1,12 @@
 //! Regex Evaluator — evaluates regex.* rules and replaceRegex cleaning.
 
+use super::{EvalContext, EvalResult};
 use crate::source::types::*;
 use regex::Regex;
 use scraper::Html;
-use super::{EvalContext, EvalResult};
 
 /// Evaluate a regex rule against HTML (operates on text content).
-pub fn evaluate(
-    html: &Html,
-    rule: &CompiledRule,
-    _context: &EvalContext,
-) -> EvalResult {
+pub fn evaluate(html: &Html, rule: &CompiledRule, _context: &EvalContext) -> EvalResult {
     if rule.segments.is_empty() {
         return EvalResult::Empty;
     }
@@ -55,7 +51,9 @@ pub fn apply_replace_regex(
     let mut result = content.to_string();
     for rule in replace_rules {
         if let Ok(re) = Regex::new(&rule.regex) {
-            result = re.replace_all(&result, rule.replacement.as_str()).to_string();
+            result = re
+                .replace_all(&result, rule.replacement.as_str())
+                .to_string();
         }
     }
     result
@@ -89,12 +87,10 @@ mod tests {
     #[test]
     fn test_replace_regex() {
         let content = "请收藏本站：www.example.com 正文内容";
-        let rules = vec![
-            crate::source::types::ReplaceRule {
-                regex: "请收藏本站.*".to_string(),
-                replacement: String::new(),
-            },
-        ];
+        let rules = vec![crate::source::types::ReplaceRule {
+            regex: "请收藏本站.*".to_string(),
+            replacement: String::new(),
+        }];
         let cleaned = apply_replace_regex(content, &rules);
         assert!(!cleaned.contains("请收藏本站"));
     }
@@ -102,12 +98,10 @@ mod tests {
     #[test]
     fn test_replace_nbsp() {
         let content = "Hello&nbsp;World";
-        let rules = vec![
-            crate::source::types::ReplaceRule {
-                regex: "&nbsp;".to_string(),
-                replacement: " ".to_string(),
-            },
-        ];
+        let rules = vec![crate::source::types::ReplaceRule {
+            regex: "&nbsp;".to_string(),
+            replacement: " ".to_string(),
+        }];
         let cleaned = apply_replace_regex(content, &rules);
         assert_eq!(cleaned, "Hello World");
     }

@@ -7,12 +7,7 @@ use super::{EvalContext, EvalResult};
 /// - {{key}} → replaced with search keyword
 /// - {{page}} → replaced with page number
 /// - {$.fieldName} → replaced with value from context variables
-pub fn substitute_url(
-    template: &str,
-    keyword: &str,
-    page: u32,
-    context: &EvalContext,
-) -> String {
+pub fn substitute_url(template: &str, keyword: &str, page: u32, context: &EvalContext) -> String {
     let mut result = template.to_string();
 
     // Replace {{key}}
@@ -29,11 +24,7 @@ pub fn substitute_url(
             let value_start = begin + 4;
             if let Some(end) = result[value_start..].find('}') {
                 let field = &result[value_start..value_start + end];
-                let replacement = context
-                    .variables
-                    .get(field)
-                    .cloned()
-                    .unwrap_or_default();
+                let replacement = context.variables.get(field).cloned().unwrap_or_default();
                 result.replace_range(begin..value_start + end + 1, &replacement);
                 replaced = true;
             }
@@ -63,14 +54,23 @@ pub fn resolve_url(base: &str, relative: &str) -> String {
     // Fallback: simple concatenation
     if relative.starts_with('/') {
         // Absolute path on the same domain
-        if let Some(domain_end) = base.find("://").map(|i| base[i + 3..].find('/').map(|j| i + 3 + j).unwrap_or(base.len())) {
+        if let Some(domain_end) = base.find("://").map(|i| {
+            base[i + 3..]
+                .find('/')
+                .map(|j| i + 3 + j)
+                .unwrap_or(base.len())
+        }) {
             format!("{}{}", &base[..domain_end], relative)
         } else {
             format!("{}{}", base.trim_end_matches('/'), relative)
         }
     } else {
         // Relative path
-        format!("{}/{}", base.trim_end_matches('/'), relative.trim_start_matches('/'))
+        format!(
+            "{}/{}",
+            base.trim_end_matches('/'),
+            relative.trim_start_matches('/')
+        )
     }
 }
 
@@ -93,12 +93,7 @@ mod tests {
     #[test]
     fn test_page_substitution() {
         let ctx = EvalContext::default();
-        let result = substitute_url(
-            "https://example.com/list?page={{page}}",
-            "",
-            3,
-            &ctx,
-        );
+        let result = substitute_url("https://example.com/list?page={{page}}", "", 3, &ctx);
         assert_eq!(result, "https://example.com/list?page=3");
     }
 
@@ -106,7 +101,8 @@ mod tests {
     #[test]
     fn test_context_variable() {
         let mut ctx = EvalContext::default();
-        ctx.variables.insert("bookId".to_string(), "12345".to_string());
+        ctx.variables
+            .insert("bookId".to_string(), "12345".to_string());
         let result = substitute_url("/book/{$.bookId}", "", 1, &ctx);
         assert_eq!(result, "/book/12345");
     }

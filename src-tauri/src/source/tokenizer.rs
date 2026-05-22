@@ -87,7 +87,11 @@ fn tokenize_segments(rule_part: &str, tokens: &mut Vec<Token>) {
             // Pattern: after xpath./json., consume until we find @<non-special> where the next part
             // looks like a new rule segment (type.value or extract attr)
             if let Some(at_idx) = find_next_segment_at(rest) {
-                let selector = format!("{}.{}", &remaining[..remaining.len() - rest.len()], &rest[..at_idx]);
+                let selector = format!(
+                    "{}.{}",
+                    &remaining[..remaining.len() - rest.len()],
+                    &rest[..at_idx]
+                );
                 tokens.push(Token::Segment(selector));
                 remaining = &rest[at_idx..];
             } else {

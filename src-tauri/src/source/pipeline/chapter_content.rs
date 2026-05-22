@@ -9,10 +9,13 @@ impl SourcePipeline {
         let html = self.fetch_html(chapter_url).await?;
 
         // Evaluate content rule
-        let content =
-            evaluator::evaluate_rule(&html, &crate::source::types::RuleAlternatives {
+        let content = evaluator::evaluate_rule(
+            &html,
+            &crate::source::types::RuleAlternatives {
                 alternatives: vec![self.source.content_rule.clone()],
-            }, &self.context);
+            },
+            &self.context,
+        );
 
         let raw = content.into_value().unwrap_or_default();
 
@@ -21,10 +24,8 @@ impl SourcePipeline {
         }
 
         // Apply replaceRegex cleaning
-        let cleaned = evaluator::regex_eval::apply_replace_regex(
-            &raw,
-            &self.source.content_replace_regex,
-        );
+        let cleaned =
+            evaluator::regex_eval::apply_replace_regex(&raw, &self.source.content_replace_regex);
 
         Ok(cleaned)
     }

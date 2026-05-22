@@ -59,7 +59,10 @@ impl SourcePipeline {
         if next.is_empty() {
             None
         } else {
-            Some(evaluator::template::resolve_url(&self.source.base_url, &next))
+            Some(evaluator::template::resolve_url(
+                &self.source.base_url,
+                &next,
+            ))
         }
     }
 }

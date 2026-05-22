@@ -1,17 +1,13 @@
 //! JSON Evaluator — evaluates json.* rules using jsonpath-rust.
 
+use super::{EvalContext, EvalResult};
 use crate::source::types::*;
 use jsonpath_rust::JsonPath;
 use scraper::Html;
 use serde_json::Value as JsonValue;
-use super::{EvalContext, EvalResult};
 
 /// Evaluate a json rule against HTML (extracts text content, parses as JSON).
-pub fn evaluate(
-    html: &Html,
-    rule: &CompiledRule,
-    _context: &EvalContext,
-) -> EvalResult {
+pub fn evaluate(html: &Html, rule: &CompiledRule, _context: &EvalContext) -> EvalResult {
     let text: String = html.root_element().text().collect();
     evaluate_json_str(&text, rule, _context)
 }
@@ -57,7 +53,10 @@ pub fn evaluate_json_str(
             EvalResult::Value(val)
         }
     } else {
-        let values: Vec<String> = results.iter().map(|v| json_value_to_string(v, attr)).collect();
+        let values: Vec<String> = results
+            .iter()
+            .map(|v| json_value_to_string(v, attr))
+            .collect();
         if values.is_empty() {
             EvalResult::Empty
         } else {

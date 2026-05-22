@@ -1,15 +1,11 @@
 //! JS Evaluator — evaluates js: prefix and @js: suffix rules using rquickjs.
 
+use super::{EvalContext, EvalResult};
 use crate::source::types::*;
 use rquickjs::{Context as JsContext, Runtime};
 use scraper::Html;
-use super::{EvalContext, EvalResult};
 
-pub fn evaluate(
-    html: &Html,
-    rule: &CompiledRule,
-    _context: &EvalContext,
-) -> EvalResult {
+pub fn evaluate(html: &Html, rule: &CompiledRule, _context: &EvalContext) -> EvalResult {
     if rule.segments.is_empty() {
         return EvalResult::Empty;
     }
@@ -52,7 +48,10 @@ fn run_js_expression(js_code: &str, text: &str) -> Result<String, String> {
 
     ctx.with(|ctx| {
         // Build a self-executing function that has access to the text content
-        let escaped = text.replace('\\', "\\\\").replace('\'', "\\'").replace('\n', "\\n");
+        let escaped = text
+            .replace('\\', "\\\\")
+            .replace('\'', "\\'")
+            .replace('\n', "\\n");
         let expr = format!(
             "(function() {{ return {}; }})()",
             js_code.replace("document.text", &format!("'{}'", escaped))

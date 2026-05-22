@@ -61,11 +61,7 @@ impl EvalResult {
 }
 
 /// Evaluate a CompiledRule against an HTML document, trying each alternative.
-pub fn evaluate_rule(
-    html: &Html,
-    rule: &RuleAlternatives,
-    context: &EvalContext,
-) -> EvalResult {
+pub fn evaluate_rule(html: &Html, rule: &RuleAlternatives, context: &EvalContext) -> EvalResult {
     for alt in &rule.alternatives {
         let result = evaluate_single(html, alt, context);
         if !result.is_empty() {
@@ -76,11 +72,7 @@ pub fn evaluate_rule(
 }
 
 /// Evaluate a single CompiledRule (no || alternatives).
-fn evaluate_single(
-    html: &Html,
-    rule: &CompiledRule,
-    context: &EvalContext,
-) -> EvalResult {
+fn evaluate_single(html: &Html, rule: &CompiledRule, context: &EvalContext) -> EvalResult {
     use crate::source::types::*;
 
     if rule.segments.is_empty() {
@@ -90,9 +82,7 @@ fn evaluate_single(
     let first_type = &rule.segments[0].selector_type;
 
     match first_type.as_str() {
-        "class" | "id" | "tag" | "text" | "children" | "css" => {
-            css::evaluate(html, rule, context)
-        }
+        "class" | "id" | "tag" | "text" | "children" | "css" => css::evaluate(html, rule, context),
         "xpath" => xpath::evaluate(html, rule, context),
         "json" => json::evaluate(html, rule, context),
         "regex" => regex_eval::evaluate(html, rule, context),

@@ -8,7 +8,13 @@ use serde::Serialize;
 use std::time::{SystemTime, UNIX_EPOCH};
 use types::{SyncBackend, SyncConfig};
 
-const SYNC_TABLES: &[&str] = &["books", "reading_progress", "bookmarks", "annotations", "book_sources"];
+const SYNC_TABLES: &[&str] = &[
+    "books",
+    "reading_progress",
+    "bookmarks",
+    "annotations",
+    "book_sources",
+];
 
 #[derive(Debug, Clone, Serialize)]
 pub struct SyncResult {
@@ -55,12 +61,24 @@ impl SyncEngine {
         let backend = self.backend.as_ref().ok_or("Sync not configured")?;
         backend.check_connection().await?;
 
-        let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_secs() as i64;
-        let mut result = SyncResult { uploaded: 0, downloaded: 0, conflicts: 0, errors: Vec::new(), timestamp: now };
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs() as i64;
+        let mut result = SyncResult {
+            uploaded: 0,
+            downloaded: 0,
+            conflicts: 0,
+            errors: Vec::new(),
+            timestamp: now,
+        };
 
         for table in SYNC_TABLES {
             match sync_table(backend.as_ref(), db, table).await {
-                Ok((up, down)) => { result.uploaded += up; result.downloaded += down; }
+                Ok((up, down)) => {
+                    result.uploaded += up;
+                    result.downloaded += down;
+                }
                 Err(e) => result.errors.push(format!("{}: {}", table, e)),
             }
         }
@@ -69,9 +87,17 @@ impl SyncEngine {
     }
 }
 
-async fn sync_table(backend: &dyn SyncBackend, db: &Connection, table: &str) -> Result<(usize, usize), String> {
+async fn sync_table(
+    backend: &dyn SyncBackend,
+    db: &Connection,
+    table: &str,
+) -> Result<(usize, usize), String> {
     let local_last: Option<i64> = db
-        .query_row("SELECT last_synced_at FROM sync_meta WHERE table_name = ?1", rusqlite::params![table], |row| row.get(0))
+        .query_row(
+            "SELECT last_synced_at FROM sync_meta WHERE table_name = ?1",
+            rusqlite::params![table],
+            |row| row.get(0),
+        )
         .ok();
 
     let remote_files = backend.list(&format!("xreader/{}", table)).await?;
@@ -80,7 +106,12 @@ async fn sync_table(backend: &dyn SyncBackend, db: &Connection, table: &str) -> 
 
     let local_data = export_table_since(db, table, local_last.unwrap_or(0))?;
     if !local_data.is_empty() {
-        backend.upload(&format!("xreader/{}/latest.json", table), local_data.as_bytes()).await?;
+        backend
+            .upload(
+                &format!("xreader/{}/latest.json", table),
+                local_data.as_bytes(),
+            )
+            .await?;
         uploaded += 1;
     }
 
@@ -92,9 +123,15 @@ async fn sync_table(backend: &dyn SyncBackend, db: &Connection, table: &str) -> 
         }
     }
 
-    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_secs() as i64;
-    db.execute("INSERT OR REPLACE INTO sync_meta (table_name, last_synced_at) VALUES (?1, ?2)", rusqlite::params![table, now])
-        .map_err(|e| e.to_string())?;
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs() as i64;
+    db.execute(
+        "INSERT OR REPLACE INTO sync_meta (table_name, last_synced_at) VALUES (?1, ?2)",
+        rusqlite::params![table, now],
+    )
+    .map_err(|e| e.to_string())?;
 
     Ok((uploaded, downloaded))
 }
