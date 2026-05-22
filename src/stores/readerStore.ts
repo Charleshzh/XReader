@@ -1,8 +1,19 @@
 import { create } from "zustand";
 import { invoke } from "@tauri-apps/api/core";
 import type { BookItem } from "@/types/book";
-import type { ChapterInfo, ReaderSettings } from "@/types/reader";
-import { DEFAULT_SETTINGS } from "@/types/reader";
+import type {
+  AssistSettings,
+  ChapterInfo,
+  InteractionSettings,
+  ReaderSettingsState,
+  ReaderStylePreset,
+} from "@/types/reader";
+import {
+  DEFAULT_READER_SETTINGS_STATE,
+  cloneReaderSettingsState,
+  cloneReaderStylePreset,
+} from "@/types/reader";
+import { migrateReaderSettings } from "@/lib/migrateReaderSettings";
 
 export interface BookmarkItem {
   id: string;
@@ -32,48 +43,48 @@ export interface StatsSummary {
   daily: { date: string; read_seconds: number; read_words: number }[];
 }
 
-interface ReaderState {
+interface ReaderRuntimeState {
   book: BookItem | null;
   chapters: ChapterInfo[];
   currentChapter: number;
   currentPosition: number;
   content: string;
   loading: boolean;
-  settings: ReaderSettings;
+  settingsState: ReaderSettingsState;
+  activeStyle: ReaderStylePreset;
   tocOpen: boolean;
   settingsOpen: boolean;
-
-  // Bookmarks
   bookmarks: BookmarkItem[];
   bookmarksOpen: boolean;
-
-  // Annotations
   annotations: AnnotationItem[];
   annotationsOpen: boolean;
   selectedAnnotation: AnnotationItem | null;
-
-  // Reading session
   sessionSeconds: number;
   sessionWords: number;
   isReading: boolean;
+}
 
+interface ReaderState extends ReaderRuntimeState {
   openBook: (book: BookItem) => Promise<void>;
   loadChapter: (index: number, position?: number) => Promise<void>;
   nextChapter: () => Promise<void>;
   prevChapter: () => Promise<void>;
   saveProgress: (chapterIndex: number, position: number) => Promise<void>;
-  updateSettings: (partial: Partial<ReaderSettings>) => void;
+  updateSettingsState: (next: ReaderSettingsState) => void;
+  replaceSettingsState: (next: ReaderSettingsState) => void;
+  patchActiveStyle: (partial: Partial<ReaderStylePreset>) => void;
+  selectStylePreset: (styleId: string) => void;
+  createStylePreset: (name: string) => void;
+  deleteStylePreset: (styleId: string) => void;
+  patchInteraction: (partial: Partial<InteractionSettings>) => void;
+  patchAssist: (partial: Partial<AssistSettings>) => void;
   toggleToc: () => void;
   toggleSettings: () => void;
   loadSavedSettings: () => Promise<void>;
-
-  // Bookmark actions
   addBookmark: (label: string) => Promise<void>;
   loadBookmarks: () => Promise<void>;
   deleteBookmark: (id: string) => Promise<void>;
   toggleBookmarks: () => void;
-
-  // Annotation actions
   addAnnotation: (
     text: string,
     note: string,
@@ -86,44 +97,89 @@ interface ReaderState {
   deleteAnnotation: (id: string) => Promise<void>;
   selectAnnotation: (a: AnnotationItem | null) => void;
   toggleAnnotations: () => void;
-
-  // Session
   startSession: () => void;
   endSession: () => Promise<void>;
   addWords: (words: number) => void;
-
-  // Stats
   getStats: (days: number) => Promise<StatsSummary>;
 }
 
+function createSettingsState(): ReaderSettingsState {
+  return cloneReaderSettingsState(DEFAULT_READER_SETTINGS_STATE);
+}
+
+function resolveActiveStyle(settingsState: ReaderSettingsState): ReaderStylePreset {
+  return (
+    settingsState.styles.find((style) => style.id === settingsState.activeStyleId) ??
+    settingsState.styles[0]
+  );
+}
+
+function persistSettingsState(settingsState: ReaderSettingsState) {
+  void invoke("save_reader_settings", {
+    settingsJson: JSON.stringify(settingsState),
+  }).catch(() => {});
+}
+
+function setPersistedSettingsState(
+  set: (partial: Partial<ReaderState> | ((state: ReaderState) => Partial<ReaderState>)) => void,
+  next: ReaderSettingsState,
+) {
+  const normalized = migrateReaderSettings(next);
+  const activeStyle = resolveActiveStyle(normalized);
+  set({ settingsState: normalized, activeStyle });
+  persistSettingsState(normalized);
+}
+
+function createStyleId(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `style-${Date.now()}`;
+}
+
+export function createInitialReaderRuntimeState(): ReaderRuntimeState {
+  const settingsState = createSettingsState();
+  return {
+    book: null,
+    chapters: [],
+    currentChapter: 0,
+    currentPosition: 0,
+    content: "",
+    loading: false,
+    settingsState,
+    activeStyle: resolveActiveStyle(settingsState),
+    tocOpen: false,
+    settingsOpen: false,
+    bookmarks: [],
+    bookmarksOpen: false,
+    annotations: [],
+    annotationsOpen: false,
+    selectedAnnotation: null,
+    sessionSeconds: 0,
+    sessionWords: 0,
+    isReading: false,
+  };
+}
+
 export const useReaderStore = create<ReaderState>((set, get) => ({
-  book: null,
-  chapters: [],
-  currentChapter: 0,
-  currentPosition: 0,
-  content: "",
-  loading: false,
-  settings: DEFAULT_SETTINGS,
-  tocOpen: false,
-  settingsOpen: false,
-  bookmarks: [],
-  bookmarksOpen: false,
-  annotations: [],
-  annotationsOpen: false,
-  selectedAnnotation: null,
-  sessionSeconds: 0,
-  sessionWords: 0,
-  isReading: false,
+  ...createInitialReaderRuntimeState(),
 
   openBook: async (book) => {
-    set({ book, loading: true, currentChapter: 0, currentPosition: 0, bookmarks: [], annotations: [] });
+    set({
+      book,
+      loading: true,
+      currentChapter: 0,
+      currentPosition: 0,
+      bookmarks: [],
+      annotations: [],
+    });
     try {
       const chaptersRaw = await invoke<{ index: number; title: string }[]>("get_chapters", {
         bookId: book.id,
       });
-      const chapters: ChapterInfo[] = chaptersRaw.map((c) => ({
-        index: c.index,
-        title: c.title || `第${c.index + 1}章`,
+      const chapters: ChapterInfo[] = chaptersRaw.map((chapter) => ({
+        index: chapter.index,
+        title: chapter.title || `第${chapter.index + 1}章`,
       }));
       const content = await invoke<string>("get_chapter_content", {
         bookId: book.id,
@@ -169,6 +225,7 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
       await get().loadChapter(currentChapter + 1);
     }
   },
+
   prevChapter: async () => {
     const { currentChapter } = get();
     if (currentChapter > 0) {
@@ -189,30 +246,119 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
     }
   },
 
-  updateSettings: (partial) => {
-    set((s) => {
-      const next = { ...s.settings, ...partial };
-      // Persist to backend (fire-and-forget)
-      invoke("save_reader_settings", { settingsJson: JSON.stringify(next) }).catch(() => {});
-      return { settings: next };
+  updateSettingsState: (next) => {
+    setPersistedSettingsState(set, next);
+  },
+
+  replaceSettingsState: (next) => {
+    setPersistedSettingsState(set, next);
+  },
+
+  patchActiveStyle: (partial) => {
+    const current = get().settingsState;
+    const styles = current.styles.map((style) =>
+      style.id === current.activeStyleId
+        ? {
+            ...cloneReaderStylePreset(style),
+            ...partial,
+            header: partial.header ? { ...style.header, ...partial.header } : { ...style.header },
+            footer: partial.footer ? { ...style.footer, ...partial.footer } : { ...style.footer },
+          }
+        : cloneReaderStylePreset(style),
+    );
+    setPersistedSettingsState(set, { ...current, styles });
+  },
+
+  selectStylePreset: (styleId) => {
+    const current = get().settingsState;
+    if (!current.styles.some((style) => style.id === styleId)) {
+      return;
+    }
+    setPersistedSettingsState(set, { ...current, activeStyleId: styleId });
+  },
+
+  createStylePreset: (name) => {
+    const current = get().settingsState;
+    const nextStyle: ReaderStylePreset = {
+      ...cloneReaderStylePreset(get().activeStyle),
+      id: createStyleId(),
+      name: name.trim() || `样式 ${current.styles.length + 1}`,
+    };
+    setPersistedSettingsState(set, {
+      ...current,
+      activeStyleId: nextStyle.id,
+      styles: [...current.styles.map(cloneReaderStylePreset), nextStyle],
     });
   },
+
+  deleteStylePreset: (styleId) => {
+    const current = get().settingsState;
+    if (current.styles.length <= 1) {
+      return;
+    }
+
+    const styles = current.styles.filter((style) => style.id !== styleId).map(cloneReaderStylePreset);
+    if (styles.length === current.styles.length) {
+      return;
+    }
+
+    setPersistedSettingsState(set, {
+      ...current,
+      activeStyleId:
+        current.activeStyleId === styleId ? styles[0].id : current.activeStyleId,
+      styles,
+    });
+  },
+
+  patchInteraction: (partial) => {
+    const current = get().settingsState;
+    setPersistedSettingsState(set, {
+      ...current,
+      interaction: {
+        ...current.interaction,
+        ...partial,
+      },
+    });
+  },
+
+  patchAssist: (partial) => {
+    const current = get().settingsState;
+    setPersistedSettingsState(set, {
+      ...current,
+      assist: {
+        ...current.assist,
+        ...partial,
+      },
+    });
+  },
+
   toggleToc: () =>
-    set((s) => ({
-      tocOpen: !s.tocOpen,
+    set((state) => ({
+      tocOpen: !state.tocOpen,
       settingsOpen: false,
       bookmarksOpen: false,
       annotationsOpen: false,
     })),
+
   toggleSettings: () =>
-    set((s) => ({
-      settingsOpen: !s.settingsOpen,
+    set((state) => ({
+      settingsOpen: !state.settingsOpen,
       tocOpen: false,
       bookmarksOpen: false,
       annotationsOpen: false,
     })),
 
-  // ── Bookmarks ──
+  loadSavedSettings: async () => {
+    try {
+      const json = await invoke<string>("load_reader_settings");
+      if (!json) return;
+      const parsed = migrateReaderSettings(JSON.parse(json));
+      set({ settingsState: parsed, activeStyle: resolveActiveStyle(parsed) });
+    } catch {
+      /* no saved settings yet */
+    }
+  },
+
   addBookmark: async (label) => {
     const { book, currentChapter, currentPosition } = get();
     if (!book) return;
@@ -228,6 +374,7 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
       console.error("Failed to add bookmark:", err);
     }
   },
+
   loadBookmarks: async () => {
     const { book } = get();
     if (!book) return;
@@ -238,19 +385,20 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
       console.error("Failed to load bookmarks:", err);
     }
   },
+
   deleteBookmark: async (id) => {
     await invoke("delete_bookmark", { id });
     await get().loadBookmarks();
   },
+
   toggleBookmarks: () =>
-    set((s) => ({
-      bookmarksOpen: !s.bookmarksOpen,
+    set((state) => ({
+      bookmarksOpen: !state.bookmarksOpen,
       tocOpen: false,
       settingsOpen: false,
       annotationsOpen: false,
     })),
 
-  // ── Annotations ──
   addAnnotation: async (text, note, color, start, end) => {
     const { book, currentChapter } = get();
     if (!book) return;
@@ -269,6 +417,7 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
       console.error("Failed to add annotation:", err);
     }
   },
+
   loadAnnotations: async () => {
     const { book, currentChapter } = get();
     if (!book) return;
@@ -282,27 +431,31 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
       console.error("Failed to load annotations:", err);
     }
   },
+
   updateAnnotationNote: async (id, note) => {
     await invoke("update_annotation_note", { id, note });
     await get().loadAnnotations();
   },
+
   deleteAnnotation: async (id) => {
     await invoke("delete_annotation", { id });
     await get().loadAnnotations();
   },
-  selectAnnotation: (a) => set({ selectedAnnotation: a }),
+
+  selectAnnotation: (annotation) => set({ selectedAnnotation: annotation }),
+
   toggleAnnotations: () =>
-    set((s) => ({
-      annotationsOpen: !s.annotationsOpen,
+    set((state) => ({
+      annotationsOpen: !state.annotationsOpen,
       tocOpen: false,
       settingsOpen: false,
       bookmarksOpen: false,
     })),
 
-  // ── Session ──
   startSession: () => {
     set({ isReading: true, sessionSeconds: 0, sessionWords: 0 });
   },
+
   endSession: async () => {
     const { book, isReading, sessionSeconds, sessionWords } = get();
     if (!isReading || !book) return;
@@ -319,32 +472,17 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
       console.error("Failed to log session:", err);
     }
   },
-  addWords: (words) => set((s) => ({ sessionWords: s.sessionWords + words })),
 
-  // ── Stats ──
+  addWords: (words) => set((state) => ({ sessionWords: state.sessionWords + words })),
+
   getStats: async (days) => {
     return await invoke<StatsSummary>("get_reading_stats", { days });
   },
-
-  loadSavedSettings: async () => {
-    try {
-      const json = await invoke<string>("load_reader_settings");
-      if (json) {
-        const saved = JSON.parse(json) as Partial<ReaderSettings>;
-        if (saved && typeof saved === "object") {
-          set((s) => ({ settings: { ...s.settings, ...saved } }));
-        }
-      }
-    } catch {
-      /* no saved settings yet */
-    }
-  },
 }));
 
-/** Prefetch a chapter in the background (fire-and-forget). */
 function prefetchChapter(bookId: string, chapterIndex: number) {
   if (chapterIndex < 0) return;
-  invoke<string>("get_chapter_content", { bookId, chapterIndex })
+  void invoke<string>("get_chapter_content", { bookId, chapterIndex })
     .then(() => {
       /* cached by Rust/Tauri */
     })

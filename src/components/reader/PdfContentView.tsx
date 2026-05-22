@@ -16,7 +16,7 @@ interface PdfContentViewProps {
 
 export function PdfContentView({ filePath }: PdfContentViewProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const { settings } = useReaderStore();
+  const { activeStyle } = useReaderStore();
 
   const [pdfDoc, setPdfDoc] = useState<pdfjsLib.PDFDocumentProxy | null>(null);
   const [pageNum, setPageNum] = useState(1);
@@ -46,7 +46,7 @@ export function PdfContentView({ filePath }: PdfContentViewProps) {
         }
       }
     }
-    load();
+    void load();
     return () => {
       cancelled = true;
     };
@@ -58,31 +58,35 @@ export function PdfContentView({ filePath }: PdfContentViewProps) {
     if (!doc || !canvas) return;
 
     let cancelled = false;
-    (async () => {
+    void (async () => {
       const page = await doc.getPage(pageNum);
       if (cancelled) return;
       const viewport = page.getViewport({ scale });
       canvas.height = viewport.height;
       canvas.width = viewport.width;
-      const ctx = canvas.getContext("2d")!;
+      const context = canvas.getContext("2d");
+      if (!context) return;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await page.render({ canvasContext: ctx, viewport } as any).promise;
+      await page.render({ canvasContext: context, viewport } as any).promise;
     })();
     return () => {
       cancelled = true;
     };
   }, [pdfDoc, pageNum, scale]);
 
-  const prevPage = () => setPageNum((p) => Math.max(1, p - 1));
-  const nextPage = () => setPageNum((p) => Math.min(totalPages, p + 1));
-  const zoomIn = () => setScale((s) => Math.min(3, s + 0.2));
-  const zoomOut = () => setScale((s) => Math.max(0.5, s - 0.2));
+  const prevPage = () => setPageNum((page) => Math.max(1, page - 1));
+  const nextPage = () => setPageNum((page) => Math.min(totalPages, page + 1));
+  const zoomIn = () => setScale((value) => Math.min(3, value + 0.2));
+  const zoomOut = () => setScale((value) => Math.max(0.5, value - 0.2));
 
   const bgClass = {
     light: "bg-gray-100",
     dark: "bg-gray-800",
     sepia: "bg-amber-100",
-  }[settings.theme];
+    green: "bg-emerald-100",
+    gray: "bg-slate-200",
+    black: "bg-black",
+  }[activeStyle.theme];
 
   if (loading) {
     return (

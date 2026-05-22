@@ -9,7 +9,8 @@ interface HtmlContentViewProps {
 export function HtmlContentView({ content }: HtmlContentViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const {
-    settings,
+    settingsState,
+    activeStyle,
     annotations,
     currentChapter,
     currentPosition,
@@ -21,8 +22,8 @@ export function HtmlContentView({ content }: HtmlContentViewProps) {
   const chapterAnnotations = useMemo(
     () =>
       annotations
-        .filter((a) => a.chapter_index === currentChapter)
-        .map((a) => ({ text: a.text, color: a.color })),
+        .filter((annotation) => annotation.chapter_index === currentChapter)
+        .map((annotation) => ({ text: annotation.text, color: annotation.color })),
     [annotations, currentChapter],
   );
 
@@ -31,52 +32,54 @@ export function HtmlContentView({ content }: HtmlContentViewProps) {
     [content, chapterAnnotations],
   );
 
-  const { fontSize, lineHeight, marginH, marginV, scrollMode, fontFamily } = settings;
+  const { fontSize, lineHeight, marginH, marginV, fontFamily, fontWeight, letterSpacing } =
+    activeStyle;
+  const scrollMode = settingsState.interaction.scrollMode;
 
   const handleScroll = useCallback(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const scrollTop = el.scrollTop;
-    const scrollHeight = el.scrollHeight - el.clientHeight;
+    const element = containerRef.current;
+    if (!element) return;
+    const scrollTop = element.scrollTop;
+    const scrollHeight = element.scrollHeight - element.clientHeight;
     const position = scrollHeight > 0 ? scrollTop / scrollHeight : 0;
     void saveProgress(currentChapter, position);
   }, [currentChapter, saveProgress]);
 
   useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
+    const element = containerRef.current;
+    if (!element) return;
     if (scrollMode !== "scroll") {
-      el.scrollTop = 0;
+      element.scrollTop = 0;
       return;
     }
 
-    const maxScrollTop = el.scrollHeight - el.clientHeight;
+    const maxScrollTop = element.scrollHeight - element.clientHeight;
     const nextScrollTop = maxScrollTop > 0 ? maxScrollTop * currentPosition : 0;
-    if (Math.abs(el.scrollTop - nextScrollTop) > 2) {
-      el.scrollTop = nextScrollTop;
+    if (Math.abs(element.scrollTop - nextScrollTop) > 2) {
+      element.scrollTop = nextScrollTop;
     }
   }, [content, currentPosition, scrollMode]);
 
   useEffect(() => {
-    const el = containerRef.current;
-    if (!el || scrollMode !== "scroll") return;
+    const element = containerRef.current;
+    if (!element || scrollMode !== "scroll") return;
     let timer: ReturnType<typeof setTimeout>;
     const onScroll = () => {
       clearTimeout(timer);
       timer = setTimeout(handleScroll, 500);
     };
-    el.addEventListener("scroll", onScroll, { passive: true });
+    element.addEventListener("scroll", onScroll, { passive: true });
     return () => {
-      el.removeEventListener("scroll", onScroll);
+      element.removeEventListener("scroll", onScroll);
       clearTimeout(timer);
     };
   }, [handleScroll, scrollMode]);
 
   const handleContentClick = useCallback(
-    (e: React.MouseEvent) => {
+    (event: React.MouseEvent) => {
       if (scrollMode !== "paginated") return;
-      const rect = e.currentTarget.getBoundingClientRect();
-      const x = e.clientX - rect.left;
+      const rect = event.currentTarget.getBoundingClientRect();
+      const x = event.clientX - rect.left;
       if (x < rect.width * 0.3) {
         void prevChapter();
       } else if (x > rect.width * 0.7) {
@@ -103,8 +106,10 @@ export function HtmlContentView({ content }: HtmlContentViewProps) {
             "--margin-h": `${marginH}%`,
             "--margin-v": `${marginV}px`,
             fontSize: `${fontSize}px`,
-            lineHeight: lineHeight,
-            fontFamily: fontFamily,
+            lineHeight,
+            fontFamily,
+            fontWeight,
+            letterSpacing: `${letterSpacing}px`,
           } as React.CSSProperties
         }
         dangerouslySetInnerHTML={{ __html: highlightedContent }}

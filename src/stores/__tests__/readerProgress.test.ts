@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
 import type { BookItem } from "@/types/book";
-import { DEFAULT_SETTINGS } from "@/types/reader";
-import { useReaderStore } from "@/stores/readerStore";
+import { cloneReaderSettingsState, DEFAULT_READER_SETTINGS_STATE } from "@/types/reader";
+import { createInitialReaderRuntimeState, useReaderStore } from "@/stores/readerStore";
 
 const mockInvoke = vi.mocked(invoke);
 const book: BookItem = {
@@ -21,24 +21,14 @@ const book: BookItem = {
 
 describe("reader progress and bookmark position", () => {
   beforeEach(() => {
+    const initial = createInitialReaderRuntimeState();
+    const settingsState = cloneReaderSettingsState(DEFAULT_READER_SETTINGS_STATE);
     useReaderStore.setState({
+      ...initial,
       book,
       chapters: [{ index: 0, title: "第一章" }],
-      currentChapter: 0,
-      currentPosition: 0,
-      content: "",
-      loading: false,
-      settings: DEFAULT_SETTINGS,
-      tocOpen: false,
-      settingsOpen: false,
-      bookmarks: [],
-      bookmarksOpen: false,
-      annotations: [],
-      annotationsOpen: false,
-      selectedAnnotation: null,
-      sessionSeconds: 0,
-      sessionWords: 0,
-      isReading: false,
+      settingsState,
+      activeStyle: settingsState.styles[0],
     });
     mockInvoke.mockReset();
   });
