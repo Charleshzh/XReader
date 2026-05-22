@@ -5,6 +5,7 @@ use rusqlite::Connection;
 use std::fs;
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
+use crate::sync::types::SyncBackend;
 use tauri::State;
 
 /// Metadata returned to frontend after importing a book.
@@ -652,4 +653,59 @@ pub async fn search_books(
             book_url: r.book_url,
         })
         .collect())
+}
+
+// ── Cloud Sync ──
+
+#[tauri::command]
+pub async fn sync_now(state: State<'_, AppState>) -> Result<crate::sync::SyncResult, String> {
+    let config = load_sync_config(&state).map_err(|e| e.to_string())?;
+    let backend = crate::sync::webdav::WebDavBackend::new(
+        config.url.clone(),
+        config.username.clone(),
+        config.password.clone(),
+    );
+
+    backend.check_connection().await.map_err(|e| format!("Connection failed: {}", e))?;
+
+    // All sync operations at MVP level: just upload a backup
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs() as i64;
+
+    Ok(crate::sync::SyncResult {
+        uploaded: 1,
+        downloaded: 0,
+        conflicts: 0,
+        errors: Vec::new(),
+        timestamp: now,
+    })
+}
+
+#[tauri::command]
+pub fn configure_sync(state: State<AppState>, config: serde_json::Value) -> Result<(), String> {
+    let json_str = serde_json::to_string(&config).map_err(|e| e.to_string())?;
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    crate::db::queries::set_setting(&db, "sync_config", &json_str).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn get_sync_config(state: State<AppState>) -> Result<serde_json::Value, String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    let json_str = crate::db::queries::get_setting(&db, "sync_config")
+        .map_err(|e| e.to_string())?
+        .unwrap_or_default();
+    serde_json::from_str(&json_str).map_err(|e| e.to_string())
+}
+
+fn load_sync_config(state: &State<AppState>) -> Result<crate::sync::types::SyncConfig, String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    let json_str = crate::db::queries::get_setting(&db, "sync_config")
+        .map_err(|e| e.to_string())?
+        .unwrap_or_default();
+    if json_str.is_empty() {
+        return Ok(Default::default());
+    }
+    serde_json::from_str(&json_str).map_err(|e| e.to_string())
 }

@@ -4,6 +4,7 @@ import { ReaderPage } from "@/pages/ReaderPage";
 import { StatsPage } from "@/pages/StatsPage";
 import { SourceManagePage } from "@/pages/SourceManagePage";
 import { SearchPage } from "@/pages/SearchPage";
+import { SettingsPage } from "@/pages/SettingsPage";
 import "./globals.css";
 
 function App() {
@@ -15,6 +16,7 @@ function App() {
         <Route path="/stats" element={<StatsPage />} />
         <Route path="/sources" element={<SourceManagePage />} />
         <Route path="/search" element={<SearchPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
       </Routes>
     </BrowserRouter>
   );
