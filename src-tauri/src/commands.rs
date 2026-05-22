@@ -20,13 +20,62 @@ pub struct ImportResult {
     pub message: String,
 }
 
-#[tauri::command]
-pub fn import_book(state: State<AppState>, file_path: String) -> Result<ImportResult, String> {
-    let path = PathBuf::from(&file_path);
-
+fn validate_import_path(file_path: &str) -> Result<PathBuf, String> {
+    let path = PathBuf::from(file_path);
     if !path.exists() {
         return Err(format!("File not found: {}", file_path));
     }
+    Ok(path)
+}
+
+fn parse_sync_config_text(raw: &str) -> Result<String, String> {
+    if raw.is_empty() {
+        return Ok(String::new());
+    }
+    match crate::sync::crypto::decrypt(raw) {
+        Ok(decrypted) => Ok(decrypted),
+        Err(_) => Ok(raw.to_string()),
+    }
+}
+
+fn is_allowed_export_directory(path: &std::path::Path) -> bool {
+    path.components().any(|component| {
+        component.as_os_str().to_str().is_some_and(|segment| {
+            segment.eq_ignore_ascii_case("documents")
+                || segment.eq_ignore_ascii_case("downloads")
+                || segment.eq_ignore_ascii_case("desktop")
+        })
+    })
+}
+
+fn validate_export_target(path: &str, content_len: usize) -> Result<PathBuf, String> {
+    if content_len > MAX_EXPORT_SIZE {
+        return Err(format!(
+            "Export content too large: {} bytes (max {})",
+            content_len, MAX_EXPORT_SIZE
+        ));
+    }
+
+    let path_buf = PathBuf::from(path);
+    let parent = path_buf
+        .parent()
+        .ok_or_else(|| "Invalid path: no parent directory".to_string())?;
+    let filename = path_buf
+        .file_name()
+        .ok_or_else(|| "Invalid path: no filename".to_string())?
+        .to_owned();
+    let resolved_parent =
+        fs::canonicalize(parent).map_err(|e| format!("Cannot access directory: {}", e))?;
+
+    if !is_allowed_export_directory(&resolved_parent) {
+        return Err("Export path must be within Documents, Downloads, or Desktop".to_string());
+    }
+
+    Ok(resolved_parent.join(filename))
+}
+#[tauri::command]
+pub fn import_book(state: State<AppState>, file_path: String) -> Result<ImportResult, String> {
+    let path = validate_import_path(&file_path)?;
 
     let registry = book::create_registry();
     let format = registry
@@ -768,7 +817,7 @@ pub fn get_sync_config(state: State<AppState>) -> Result<serde_json::Value, Stri
     if encrypted.is_empty() {
         return Ok(serde_json::Value::Null);
     }
-    let decrypted = crate::sync::crypto::decrypt(&encrypted).unwrap_or(encrypted); // Graceful fallback for old plaintext
+    let decrypted = parse_sync_config_text(&encrypted)?;
     serde_json::from_str(&decrypted).map_err(|e| e.to_string())
 }
 
@@ -780,7 +829,7 @@ fn load_sync_config(state: &State<AppState>) -> Result<crate::sync::types::SyncC
     if encrypted.is_empty() {
         return Ok(Default::default());
     }
-    let json_str = crate::sync::crypto::decrypt(&encrypted).unwrap_or(encrypted); // Graceful fallback
+    let json_str = parse_sync_config_text(&encrypted)?;
     serde_json::from_str(&json_str).map_err(|e| e.to_string())
 }
 
@@ -808,41 +857,57 @@ const MAX_EXPORT_SIZE: usize = 10 * 1024 * 1024; // 10 MB
 #[tauri::command]
 #[allow(unused_variables)]
 pub fn write_file(state: State<AppState>, path: String, content: String) -> Result<(), String> {
-    if content.len() > MAX_EXPORT_SIZE {
-        return Err(format!(
-            "Export content too large: {} bytes (max {})",
-            content.len(),
-            MAX_EXPORT_SIZE
-        ));
-    }
-
-    // Canonicalize parent to prevent path traversal (file may not exist yet)
-    let path_buf = std::path::Path::new(&path).to_path_buf();
-    let parent = path_buf
-        .parent()
-        .ok_or_else(|| "Invalid path: no parent directory".to_string())?;
-    let filename = path_buf
-        .file_name()
-        .ok_or_else(|| "Invalid path: no filename".to_string())?
-        .to_string_lossy()
-        .to_string();
-
-    let resolved_parent =
-        std::fs::canonicalize(parent).map_err(|e| format!("Cannot access directory: {}", e))?;
-
-    // Restrict to common export directories
-    let allowed_str = resolved_parent.to_string_lossy().to_lowercase();
-    let is_allowed = allowed_str.contains("\\documents")
-        || allowed_str.contains("/documents")
-        || allowed_str.contains("\\downloads")
-        || allowed_str.contains("/downloads")
-        || allowed_str.contains("\\desktop")
-        || allowed_str.contains("/desktop");
-
-    if !is_allowed {
-        return Err("Export path must be within Documents, Downloads, or Desktop".to_string());
-    }
-
-    let resolved = resolved_parent.join(&filename);
+    let resolved = validate_export_target(&path, content.len())?;
     std::fs::write(&resolved, content).map_err(|e| format!("Failed to write file: {}", e))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    fn unique_temp_dir(label: &str) -> PathBuf {
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_nanos();
+        let dir = std::env::temp_dir().join(format!("xreader-commands-{label}-{nanos}"));
+        fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    #[test]
+    fn test_validate_import_path_rejects_missing_file() {
+        let err = validate_import_path("missing-file.epub").unwrap_err();
+        assert!(err.contains("File not found"));
+    }
+
+    #[test]
+    fn test_parse_sync_config_text_accepts_plaintext_fallback() {
+        let json = r#"{"enabled":false,"backend_type":"webdav","url":"","username":"","password":"","auto_sync_interval_minutes":30}"#;
+        let parsed = parse_sync_config_text(json).unwrap();
+        assert_eq!(parsed, json);
+    }
+
+    #[test]
+    fn test_validate_export_target_rejects_large_payload() {
+        let err = validate_export_target("C:/Users/test/Documents/out.md", MAX_EXPORT_SIZE + 1)
+            .unwrap_err();
+        assert!(err.contains("Export content too large"));
+    }
+
+    #[test]
+    fn test_validate_export_target_accepts_allowed_directory() {
+        let root = unique_temp_dir("allowed");
+        let documents_dir = root.join("Documents");
+        fs::create_dir_all(&documents_dir).unwrap();
+        let export_path = documents_dir.join("reader-notes.md");
+        let resolved = validate_export_target(export_path.to_str().unwrap(), 16).unwrap();
+        assert_eq!(resolved.file_name(), export_path.file_name());
+        assert_eq!(
+            resolved.parent().unwrap(),
+            fs::canonicalize(&documents_dir).unwrap()
+        );
+        fs::remove_dir_all(&root).unwrap();
+    }
 }
