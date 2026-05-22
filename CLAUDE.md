@@ -2,7 +2,7 @@
 
 Tauri v2 + React 19 + TypeScript desktop app for reading local books (EPUB/TXT/PDF) and web-sourced novels via Legado-compatible book source rule engine.
 
-**Status**: Phase 6 complete. Entering Phase 7 (polish + release).
+**Status**: Phase 7 complete. All MVP phases delivered.
 
 ## Tech Stack
 
@@ -30,6 +30,8 @@ Tauri v2 + React 19 + TypeScript desktop app for reading local books (EPUB/TXT/P
 | HTTP | reqwest + cookie_store | 0.13 / 0.22 |
 | Charts | recharts (frontend) | 3.8 |
 | Sync | async-trait + chrono | 0.1 / 0.4 |
+| Logging | env_logger + log | 0.11 / 0.4 |
+| Updater | tauri-plugin-updater | 2.10 |
 | Package | pnpm | 11.2.2 |
 
 ## Quick Commands
@@ -143,20 +145,17 @@ Legado JSON → compile_source() → CompiledSource
 - **Frontend layers**: Page → Feature → UI Component. Zustand stores: one per domain.
 - **Asset protocol**: `convertFileSrc(path)` for local files.
 - **Git**: GitHub Flow, Conventional Commits, main protected.
-
+- **Before commit**: `cargo fmt && cargo clippy -- -D warnings && npx prettier --write "src/**/*.{ts,tsx,css}" && npx eslint .`
 ## Current State & Next Steps
 
-**Done (Phase 1–6)**:
+**Done (Phase 1–7 — MVP Complete)**:
 - Bookshelf + import (EPUB/TXT/PDF)
 - Reader core (HTML + pdf.js, chapter TOC, settings, themes)
 - Bookmarks + annotations + reading stats with charts
 - Legado rule engine: Tokenizer, 6 evaluators, 4 pipelines
 - Source management: import/delete, online search
 - Cloud sync: WebDAV backend, SyncBackend trait, settings page
+- Polish: chapter prefetch, ErrorBoundary, env_logger, auto-updater plugin
 - 24 IPC commands, CI passing
 
-**Next: Phase 7 — Polish & Release (20-40h)**
-- Performance optimization (chapter preload, virtual list)
-- Error handling + logging, packaging, auto-update
-
-**Future**: Phase 8 (TTS/MOBI/dictionary/mobile)
+**Future**: Phase 8 (TTS/MOBI/dictionary/mobile) — optional post-MVP
