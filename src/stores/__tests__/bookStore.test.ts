@@ -6,7 +6,7 @@ const mockInvoke = vi.mocked(invoke);
 
 describe("useBookStore", () => {
   beforeEach(() => {
-    useBookStore.setState({ books: [], loading: false, viewMode: "grid" });
+    useBookStore.setState({ books: [], loading: false, loaded: false, viewMode: "grid" });
     mockInvoke.mockReset();
   });
 

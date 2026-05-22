@@ -8,10 +8,16 @@ interface HtmlContentViewProps {
 
 export function HtmlContentView({ content }: HtmlContentViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const { settings, annotations, currentChapter, saveProgress, nextChapter, prevChapter } =
-    useReaderStore();
+  const {
+    settings,
+    annotations,
+    currentChapter,
+    currentPosition,
+    saveProgress,
+    nextChapter,
+    prevChapter,
+  } = useReaderStore();
 
-  // Filter annotations for current chapter
   const chapterAnnotations = useMemo(
     () =>
       annotations
@@ -20,7 +26,6 @@ export function HtmlContentView({ content }: HtmlContentViewProps) {
     [annotations, currentChapter],
   );
 
-  // Highlighted content
   const highlightedContent = useMemo(
     () => highlightAnnotations(content, chapterAnnotations),
     [content, chapterAnnotations],
@@ -34,14 +39,23 @@ export function HtmlContentView({ content }: HtmlContentViewProps) {
     const scrollTop = el.scrollTop;
     const scrollHeight = el.scrollHeight - el.clientHeight;
     const position = scrollHeight > 0 ? scrollTop / scrollHeight : 0;
-    saveProgress(currentChapter, position);
+    void saveProgress(currentChapter, position);
   }, [currentChapter, saveProgress]);
 
   useEffect(() => {
-    if (containerRef.current) {
-      containerRef.current.scrollTop = 0;
+    const el = containerRef.current;
+    if (!el) return;
+    if (scrollMode !== "scroll") {
+      el.scrollTop = 0;
+      return;
     }
-  }, [content]);
+
+    const maxScrollTop = el.scrollHeight - el.clientHeight;
+    const nextScrollTop = maxScrollTop > 0 ? maxScrollTop * currentPosition : 0;
+    if (Math.abs(el.scrollTop - nextScrollTop) > 2) {
+      el.scrollTop = nextScrollTop;
+    }
+  }, [content, currentPosition, scrollMode]);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -64,9 +78,9 @@ export function HtmlContentView({ content }: HtmlContentViewProps) {
       const rect = e.currentTarget.getBoundingClientRect();
       const x = e.clientX - rect.left;
       if (x < rect.width * 0.3) {
-        prevChapter();
+        void prevChapter();
       } else if (x > rect.width * 0.7) {
-        nextChapter();
+        void nextChapter();
       }
     },
     [scrollMode, prevChapter, nextChapter],

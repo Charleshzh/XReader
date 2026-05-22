@@ -36,6 +36,7 @@ interface ReaderState {
   book: BookItem | null;
   chapters: ChapterInfo[];
   currentChapter: number;
+  currentPosition: number;
   content: string;
   loading: boolean;
   settings: ReaderSettings;
@@ -57,7 +58,7 @@ interface ReaderState {
   isReading: boolean;
 
   openBook: (book: BookItem) => Promise<void>;
-  loadChapter: (index: number) => Promise<void>;
+  loadChapter: (index: number, position?: number) => Promise<void>;
   nextChapter: () => Promise<void>;
   prevChapter: () => Promise<void>;
   saveProgress: (chapterIndex: number, position: number) => Promise<void>;
@@ -99,6 +100,7 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
   book: null,
   chapters: [],
   currentChapter: 0,
+  currentPosition: 0,
   content: "",
   loading: false,
   settings: DEFAULT_SETTINGS,
@@ -114,7 +116,7 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
   isReading: false,
 
   openBook: async (book) => {
-    set({ book, loading: true, currentChapter: 0, bookmarks: [], annotations: [] });
+    set({ book, loading: true, currentChapter: 0, currentPosition: 0, bookmarks: [], annotations: [] });
     try {
       const chaptersRaw = await invoke<{ index: number; title: string }[]>("get_chapters", {
         bookId: book.id,
@@ -128,9 +130,9 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
         chapterIndex: 0,
       });
       set({ chapters, content, loading: false });
-      get().loadSavedSettings();
-      get().loadBookmarks();
-      get().loadAnnotations();
+      void get().loadSavedSettings();
+      void get().loadBookmarks();
+      void get().loadAnnotations();
       get().startSession();
     } catch (err) {
       console.error("Failed to open book:", err);
@@ -138,19 +140,18 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
     }
   },
 
-  loadChapter: async (index) => {
+  loadChapter: async (index, position = 0) => {
     const { book } = get();
     if (!book) return;
-    set({ loading: true, currentChapter: index });
+    set({ loading: true, currentChapter: index, currentPosition: position });
     try {
       const content = await invoke<string>("get_chapter_content", {
         bookId: book.id,
         chapterIndex: index,
       });
       set({ content, loading: false });
-      get().loadAnnotations();
+      void get().loadAnnotations();
 
-      // Prefetch adjacent chapters
       const currentBook = get().book;
       if (currentBook) {
         prefetchChapter(currentBook.id, index + 1);
@@ -176,6 +177,7 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
   },
 
   saveProgress: async (chapterIndex, position) => {
+    set({ currentPosition: position });
     try {
       await invoke("save_progress", {
         bookId: get().book?.id,
@@ -212,13 +214,13 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
 
   // ── Bookmarks ──
   addBookmark: async (label) => {
-    const { book, currentChapter } = get();
+    const { book, currentChapter, currentPosition } = get();
     if (!book) return;
     try {
       await invoke("add_bookmark", {
         bookId: book.id,
         chapterIndex: currentChapter,
-        position: 0,
+        position: currentPosition,
         label,
       });
       await get().loadBookmarks();

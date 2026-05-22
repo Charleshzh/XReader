@@ -22,6 +22,7 @@ describe("useReaderStore", () => {
       book: null,
       chapters: [],
       currentChapter: 0,
+      currentPosition: 0,
       content: "",
       loading: false,
       settings: DEFAULT_SETTINGS,

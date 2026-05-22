@@ -5,6 +5,7 @@ import type { BookItem, ImportResult, ViewMode } from "@/types/book";
 interface BookState {
   books: BookItem[];
   loading: boolean;
+  loaded: boolean;
   viewMode: ViewMode;
 
   /** Fetch books from Rust backend */
@@ -23,16 +24,17 @@ interface BookState {
 export const useBookStore = create<BookState>((set, get) => ({
   books: [],
   loading: false,
+  loaded: false,
   viewMode: "grid",
 
   loadBooks: async () => {
     set({ loading: true });
     try {
       const books = await invoke<BookItem[]>("list_books");
-      set({ books, loading: false });
+      set({ books, loading: false, loaded: true });
     } catch (err) {
       console.error("Failed to load books:", err);
-      set({ loading: false });
+      set({ loading: false, loaded: true });
     }
   },
 
