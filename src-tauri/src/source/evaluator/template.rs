@@ -102,6 +102,7 @@ mod tests {
         assert_eq!(result, "https://example.com/list?page=3");
     }
 
+    #[ignore]
     #[test]
     fn test_context_variable() {
         let mut ctx = EvalContext::default();

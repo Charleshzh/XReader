@@ -9,7 +9,7 @@ export function SourceManagePage() {
 
   useEffect(() => {
     loadSources();
-  }, []);
+  }, [loadSources]);
 
   const handleImport = () => {
     if (!importText.trim()) return;

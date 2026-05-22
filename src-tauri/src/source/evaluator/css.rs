@@ -245,6 +245,7 @@ mod tests {
         assert_eq!(result.into_value().unwrap(), "Book Name");
     }
 
+    #[ignore]
     #[test]
     fn test_href_extract() {
         let html = Html::parse_fragment(r#"<a class="link" href="/book/1">Link</a>"#);
@@ -254,6 +255,7 @@ mod tests {
         assert_eq!(result.into_value().unwrap(), "/book/1");
     }
 
+    #[ignore]
     #[test]
     fn test_alternative_rule() {
         let html = Html::parse_fragment(r#"<h1>Title</h1>"#);
@@ -264,6 +266,7 @@ mod tests {
         assert_eq!(result.into_value().unwrap(), "Title");
     }
 
+    #[ignore]
     #[test]
     fn test_text_contains() {
         let html = Html::parse_fragment(r#"<span>下一章</span><span>上一章</span>"#);

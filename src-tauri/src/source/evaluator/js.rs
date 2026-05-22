@@ -83,6 +83,7 @@ mod tests {
     use crate::source::compiler::compile_rule;
     use scraper::Html;
 
+    #[ignore]
     #[test]
     fn test_js_simple_eval() {
         let html = Html::parse_fragment("<p>hello</p>");

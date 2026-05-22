@@ -11,13 +11,14 @@ export function SearchPage() {
 
   useEffect(() => {
     loadSources();
-  }, []);
+  }, [loadSources]);
 
   useEffect(() => {
     if (sources.length > 0 && !sourceId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSourceId(sources[0].id);
     }
-  }, [sources]);
+  }, [sources, sourceId]);
 
   const handleSearch = () => {
     if (!keyword.trim() || !sourceId) return;
