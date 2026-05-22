@@ -15,7 +15,7 @@ A discrete reading unit within a book. Local books: parsed from file structure (
 The library view. Grid or list layout. Supports search by title/author, import via file dialog, delete with cascade.
 
 ### Reader (阅读器)
-The reading view. Renders chapter content as HTML. Modes: paginated (left/right swipe) or scroll. Configurable: font size, line height, margins, theme (6 presets: white/cream/gray/black/eye-green/custom).
+The reading view. EPUB/TXT use `HtmlContentView` (Rust-extracted chapter HTML, `dangerouslySetInnerHTML`). PDF uses `PdfContentView` (pdfjs-dist Canvas, zoom 0.5-3x). Modes: scroll (continuous, debounced progress save) or paginated (keyboard/button chapter nav). Settings panel: font size (7 presets 14-28px), line height (6 presets 1.4-2.5x), theme (light/dark/sepia). Chapter TOC sidebar for navigation.
 
 ### Reading Progress (阅读进度)
 Tracks `(book_id, chapter_index, position)` where `position ∈ [0.0, 1.0]` is fraction within chapter. Updated on page turn or scroll position change. Auto-restored on reopen.
@@ -95,9 +95,9 @@ Default: WebDAV. Extensible to S3, OneDrive, custom REST.
 
 | Format | Extension | Parser | Renderer | Status |
 |--------|-----------|--------|----------|--------|
-| EPUB | .epub | Rust `epub` crate | epub.js (frontend) | Phase 2 import done, Phase 3 render WIP |
-| TXT | .txt | Rust `encoding_rs` + regex | Custom HTML render | Phase 2 import done, Phase 3 render WIP |
-| PDF | .pdf | Rust `lopdf` (stub) | pdfjs-dist (frontend) | Phase 2 stub, Phase 3 full |
+| EPUB | .epub | Rust `epub` crate | HtmlContentView (HTML direct) | ✅ Phase 3 complete |
+| TXT | .txt | Rust `encoding_rs` + regex | HtmlContentView (HTML direct) | ✅ Phase 3 complete |
+| PDF | .pdf | filename→title | PdfContentView (pdfjs-dist) | ✅ Phase 3 complete |
 | MOBI | .mobi, .azw3 | — | — | Phase 8 |
 | FB2 | .fb2 | — | — | Phase 8 |
 
