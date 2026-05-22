@@ -1,0 +1,43 @@
+#![allow(dead_code)]
+#![allow(unused_imports)]
+mod book;
+mod db;
+mod source;
+mod sync;
+
+use std::sync::Mutex;
+
+pub struct AppState {
+    pub db: Mutex<rusqlite::Connection>,
+}
+
+#[tauri::command]
+fn greet(name: &str) -> String {
+    format!("Hello, {}! XReader is running.", name)
+}
+
+#[tauri::command]
+fn get_app_version() -> String {
+    env!("CARGO_PKG_VERSION").to_string()
+}
+
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
+pub fn run() {
+    // Determine app data directory
+    let app_dir = directories::ProjectDirs::from("com", "xreader", "XReader")
+        .map(|d| d.data_dir().to_path_buf())
+        .unwrap_or_else(|| std::path::PathBuf::from("./xreader_data"));
+    let db_dir = app_dir.to_string_lossy().to_string();
+
+    // Initialize database
+    let conn = db::init(&db_dir).expect("Failed to initialize database");
+
+    tauri::Builder::default()
+        .plugin(tauri_plugin_opener::init())
+        .manage(AppState {
+            db: Mutex::new(conn),
+        })
+        .invoke_handler(tauri::generate_handler![greet, get_app_version])
+        .run(tauri::generate_context!())
+        .expect("error while running tauri application");
+}
