@@ -226,3 +226,299 @@ pub fn save_progress(
     .map_err(|e| e.to_string())?;
     Ok(())
 }
+
+// ── Bookmarks ──
+
+#[derive(serde::Serialize)]
+pub struct BookmarkItem {
+    pub id: String,
+    pub book_id: String,
+    pub chapter_index: i64,
+    pub position: f64,
+    pub label: String,
+    pub created_at: i64,
+}
+
+#[tauri::command]
+pub fn add_bookmark(
+    state: State<AppState>,
+    book_id: String,
+    chapter_index: i64,
+    position: f64,
+    label: String,
+) -> Result<BookmarkItem, String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    let id = uuid::Uuid::new_v4().to_string();
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs() as i64;
+
+    db.execute(
+        "INSERT INTO bookmarks (id, book_id, chapter_index, position, label, created_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+        rusqlite::params![id, book_id, chapter_index, position, label, now],
+    )
+    .map_err(|e| e.to_string())?;
+
+    Ok(BookmarkItem {
+        id,
+        book_id,
+        chapter_index,
+        position,
+        label,
+        created_at: now,
+    })
+}
+
+#[tauri::command]
+pub fn list_bookmarks(
+    state: State<AppState>,
+    book_id: String,
+) -> Result<Vec<BookmarkItem>, String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    let mut stmt = db
+        .prepare(
+            "SELECT id, book_id, chapter_index, position, label, created_at
+             FROM bookmarks WHERE book_id = ?1 ORDER BY chapter_index, position",
+        )
+        .map_err(|e| e.to_string())?;
+
+    let rows = stmt
+        .query_map(rusqlite::params![book_id], |row| {
+            Ok(BookmarkItem {
+                id: row.get(0)?,
+                book_id: row.get(1)?,
+                chapter_index: row.get(2)?,
+                position: row.get(3)?,
+                label: row.get(4)?,
+                created_at: row.get(5)?,
+            })
+        })
+        .map_err(|e| e.to_string())?;
+
+    let mut items = Vec::new();
+    for row in rows {
+        items.push(row.map_err(|e| e.to_string())?);
+    }
+    Ok(items)
+}
+
+#[tauri::command]
+pub fn delete_bookmark(state: State<AppState>, id: String) -> Result<(), String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    db.execute("DELETE FROM bookmarks WHERE id = ?1", rusqlite::params![id])
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+// ── Annotations ──
+
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct AnnotationItem {
+    pub id: String,
+    pub book_id: String,
+    pub chapter_index: i64,
+    pub start_position: f64,
+    pub end_position: f64,
+    pub text: String,
+    pub note: String,
+    pub color: String,
+    pub created_at: i64,
+    pub updated_at: i64,
+}
+
+#[tauri::command]
+pub fn add_annotation(
+    state: State<AppState>,
+    book_id: String,
+    chapter_index: i64,
+    start_position: f64,
+    end_position: f64,
+    text: String,
+    note: String,
+    color: String,
+) -> Result<AnnotationItem, String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    let id = uuid::Uuid::new_v4().to_string();
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs() as i64;
+
+    db.execute(
+        "INSERT INTO annotations (id, book_id, chapter_index, start_position, end_position, text, note, color, created_at, updated_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+        rusqlite::params![id, book_id, chapter_index, start_position, end_position, text, note, color, now, now],
+    )
+    .map_err(|e| e.to_string())?;
+
+    Ok(AnnotationItem {
+        id,
+        book_id,
+        chapter_index,
+        start_position,
+        end_position,
+        text,
+        note,
+        color,
+        created_at: now,
+        updated_at: now,
+    })
+}
+
+#[tauri::command]
+pub fn update_annotation_note(
+    state: State<AppState>,
+    id: String,
+    note: String,
+) -> Result<(), String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs() as i64;
+    db.execute(
+        "UPDATE annotations SET note = ?1, updated_at = ?2 WHERE id = ?3",
+        rusqlite::params![note, now, id],
+    )
+    .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn list_annotations(
+    state: State<AppState>,
+    book_id: String,
+    chapter_index: i64,
+) -> Result<Vec<AnnotationItem>, String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    let mut stmt = db
+        .prepare(
+            "SELECT id, book_id, chapter_index, start_position, end_position, text, note, color, created_at, updated_at
+             FROM annotations WHERE book_id = ?1 AND chapter_index = ?2 ORDER BY start_position",
+        )
+        .map_err(|e| e.to_string())?;
+
+    let rows = stmt
+        .query_map(rusqlite::params![book_id, chapter_index], |row| {
+            Ok(AnnotationItem {
+                id: row.get(0)?,
+                book_id: row.get(1)?,
+                chapter_index: row.get(2)?,
+                start_position: row.get(3)?,
+                end_position: row.get(4)?,
+                text: row.get(5)?,
+                note: row.get(6)?,
+                color: row.get(7)?,
+                created_at: row.get(8)?,
+                updated_at: row.get(9)?,
+            })
+        })
+        .map_err(|e| e.to_string())?;
+
+    let mut items = Vec::new();
+    for row in rows {
+        items.push(row.map_err(|e| e.to_string())?);
+    }
+    Ok(items)
+}
+
+#[tauri::command]
+pub fn delete_annotation(state: State<AppState>, id: String) -> Result<(), String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    db.execute("DELETE FROM annotations WHERE id = ?1", rusqlite::params![id])
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+// ── Reading Stats ──
+
+#[derive(serde::Serialize)]
+pub struct StatsSummary {
+    pub total_seconds: i64,
+    pub total_words: i64,
+    pub daily: Vec<DailyStats>,
+}
+
+#[derive(serde::Serialize)]
+pub struct DailyStats {
+    pub date: String,
+    pub read_seconds: i64,
+    pub read_words: i64,
+}
+
+#[tauri::command]
+pub fn log_reading_session(
+    state: State<AppState>,
+    book_id: String,
+    date: String,
+    seconds: i64,
+    words: i64,
+) -> Result<(), String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    db.execute(
+        "INSERT INTO reading_stats (book_id, date, read_seconds, read_words)
+         VALUES (?1, ?2, ?3, ?4)
+         ON CONFLICT(book_id, date) DO UPDATE SET
+           read_seconds = read_seconds + ?3,
+           read_words = read_words + ?4",
+        rusqlite::params![book_id, date, seconds, words],
+    )
+    .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn get_reading_stats(
+    state: State<AppState>,
+    days: i64,
+) -> Result<StatsSummary, String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+
+    // Aggregate totals
+    let total_seconds: i64 = db
+        .query_row(
+            "SELECT COALESCE(SUM(read_seconds), 0) FROM reading_stats",
+            [],
+            |row| row.get(0),
+        )
+        .map_err(|e| e.to_string())?;
+
+    let total_words: i64 = db
+        .query_row(
+            "SELECT COALESCE(SUM(read_words), 0) FROM reading_stats",
+            [],
+            |row| row.get(0),
+        )
+        .map_err(|e| e.to_string())?;
+
+    // Recent daily stats
+    let mut stmt = db
+        .prepare(
+            "SELECT date, read_seconds, read_words FROM reading_stats
+             ORDER BY date DESC LIMIT ?1",
+        )
+        .map_err(|e| e.to_string())?;
+
+    let rows = stmt
+        .query_map(rusqlite::params![days], |row| {
+            Ok(DailyStats {
+                date: row.get(0)?,
+                read_seconds: row.get(1)?,
+                read_words: row.get(2)?,
+            })
+        })
+        .map_err(|e| e.to_string())?;
+
+    let mut daily = Vec::new();
+    for row in rows {
+        daily.push(row.map_err(|e| e.to_string())?);
+    }
+
+    Ok(StatsSummary {
+        total_seconds,
+        total_words,
+        daily,
+    })
+}

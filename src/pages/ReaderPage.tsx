@@ -7,13 +7,24 @@ import { HtmlContentView } from "@/components/reader/HtmlContentView";
 import { PdfContentView } from "@/components/reader/PdfContentView";
 import { ChapterTOC } from "@/components/reader/ChapterTOC";
 import { ReaderSettings } from "@/components/reader/ReaderSettings";
+import { BookmarkPanel } from "@/components/reader/BookmarkPanel";
+import { AnnotationPanel } from "@/components/reader/AnnotationPanel";
 import { Loader2 } from "lucide-react";
 
 export function ReaderPage() {
   const { bookId } = useParams<{ bookId: string }>();
   const navigate = useNavigate();
-  const { book, content, loading, currentChapter, chapters, tocOpen, settingsOpen } =
-    useReaderStore();
+  const {
+    book,
+    content,
+    loading,
+    currentChapter,
+    chapters,
+    tocOpen,
+    settingsOpen,
+    bookmarksOpen,
+    annotationsOpen,
+  } = useReaderStore();
   const books = useBookStore((s) => s.books);
 
   useEffect(() => {
@@ -59,6 +70,12 @@ export function ReaderPage() {
 
       {/* Settings panel */}
       {settingsOpen && <ReaderSettings />}
+
+      {/* Bookmark panel */}
+      {bookmarksOpen && <BookmarkPanel />}
+
+      {/* Annotation panel */}
+      {annotationsOpen && <AnnotationPanel />}
     </div>
   );
 }

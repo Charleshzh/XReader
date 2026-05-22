@@ -1,8 +1,15 @@
-import { type ReactNode, useCallback, useEffect } from "react";
+import { type ReactNode, useCallback, useEffect, useRef } from "react";
 import { useReaderStore } from "@/stores/readerStore";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ChevronLeft, ChevronRight, List, Settings } from "lucide-react";
-
+import {
+  ArrowLeft,
+  Bookmark,
+  ChevronLeft,
+  ChevronRight,
+  Highlighter,
+  List,
+  Settings,
+} from "lucide-react";
 interface ReaderShellProps {
   title: string;
   chapterTitle: string;
@@ -19,6 +26,9 @@ export function ReaderShell({ title, chapterTitle, onBack, children }: ReaderShe
     prevChapter,
     toggleToc,
     toggleSettings,
+    toggleBookmarks,
+    toggleAnnotations,
+    endSession,
   } = useReaderStore();
 
   const isPaginated = settings.scrollMode === "paginated";
@@ -51,11 +61,29 @@ export function ReaderShell({ title, chapterTitle, onBack, children }: ReaderShe
     sepia: "bg-amber-50 text-amber-950",
   }[settings.theme];
 
+  // Reading session timer: tick every 10 seconds
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  useEffect(() => {
+    timerRef.current = setInterval(() => {
+      useReaderStore.setState((s) => ({
+        sessionSeconds: s.sessionSeconds + 10,
+      }));
+    }, 10000);
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, []);
+
+  const handleBack = () => {
+    endSession();
+    onBack();
+  };
+
   return (
     <div className={`flex h-full flex-col ${themeClass}`}>
       {/* Top bar */}
       <header className="flex h-12 shrink-0 items-center justify-between border-b border-border/50 px-3">
-        <Button variant="ghost" size="icon" onClick={onBack}>
+        <Button variant="ghost" size="icon" onClick={handleBack}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div className="flex-1 truncate px-3 text-center text-sm">
@@ -68,6 +96,12 @@ export function ReaderShell({ title, chapterTitle, onBack, children }: ReaderShe
           </Button>
           <Button variant="ghost" size="icon" onClick={toggleSettings}>
             <Settings className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="icon" onClick={toggleBookmarks}>
+            <Bookmark className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="icon" onClick={toggleAnnotations}>
+            <Highlighter className="h-4 w-4" />
           </Button>
         </div>
       </header>
