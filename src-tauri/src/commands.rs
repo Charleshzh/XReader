@@ -20,10 +20,7 @@ pub struct ImportResult {
 }
 
 #[tauri::command]
-pub fn import_book(
-    state: State<AppState>,
-    file_path: String,
-) -> Result<ImportResult, String> {
+pub fn import_book(state: State<AppState>, file_path: String) -> Result<ImportResult, String> {
     let path = PathBuf::from(&file_path);
 
     if !path.exists() {
@@ -69,7 +66,13 @@ pub fn import_book(
     let cover_output = PathBuf::from(&cover_path);
 
     let cover_result = format
-        .extract_cover(&path, &cover_output.parent().map(|p| p.to_path_buf()).unwrap_or_else(|| PathBuf::from(".")))
+        .extract_cover(
+            &path,
+            &cover_output
+                .parent()
+                .map(|p| p.to_path_buf())
+                .unwrap_or_else(|| PathBuf::from(".")),
+        )
         .map_err(|e| format!("Failed to extract cover: {}", e))?;
 
     let cover_path_str = cover_result
@@ -118,7 +121,10 @@ pub fn import_book(
         cover_path: cover_path_str,
         format: meta.format,
         total_chapters: meta.total_chapters,
-        message: format!("Successfully imported {}", path.file_name().unwrap_or_default().to_string_lossy()),
+        message: format!(
+            "Successfully imported {}",
+            path.file_name().unwrap_or_default().to_string_lossy()
+        ),
     })
 }
 
@@ -173,10 +179,7 @@ pub struct ChapterItem {
 }
 
 #[tauri::command]
-pub fn get_chapters(
-    state: State<AppState>,
-    book_id: String,
-) -> Result<Vec<ChapterItem>, String> {
+pub fn get_chapters(state: State<AppState>, book_id: String) -> Result<Vec<ChapterItem>, String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
     let book = db::queries::get_book(&db, &book_id)
         .map_err(|e| e.to_string())?

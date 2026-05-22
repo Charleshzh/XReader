@@ -65,6 +65,7 @@ export function PdfContentView({ filePath }: PdfContentViewProps) {
       canvas.height = viewport.height;
       canvas.width = viewport.width;
       const ctx = canvas.getContext("2d")!;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await page.render({ canvasContext: ctx, viewport } as any).promise;
     })();
     return () => {

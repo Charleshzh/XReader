@@ -19,15 +19,18 @@ impl BookFormat for EpubFormat {
         let file = fs::File::open(path)
             .with_context(|| format!("Cannot open EPUB: {}", path.display()))?;
         let reader = BufReader::new(file);
-        let doc = epub::doc::EpubDoc::from_reader(reader)
-            .context("Failed to parse EPUB document")?;
+        let doc =
+            epub::doc::EpubDoc::from_reader(reader).context("Failed to parse EPUB document")?;
 
-        let title = doc.mdata("title").map(|m| m.value.clone()).unwrap_or_else(|| {
-            path.file_stem()
-                .and_then(|s| s.to_str())
-                .unwrap_or("Unknown")
-                .to_string()
-        });
+        let title = doc
+            .mdata("title")
+            .map(|m| m.value.clone())
+            .unwrap_or_else(|| {
+                path.file_stem()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("Unknown")
+                    .to_string()
+            });
         let author = doc
             .mdata("creator")
             .map(|m| m.value.clone())

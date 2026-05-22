@@ -24,7 +24,7 @@ export function ReaderPage() {
     } else {
       navigate("/", { replace: true });
     }
-  }, [bookId, books]);
+  }, [bookId, books, navigate]);
 
   if (!book) {
     return (

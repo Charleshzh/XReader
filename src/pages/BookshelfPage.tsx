@@ -15,9 +15,10 @@ export function BookshelfPage() {
 
   const navigate = useNavigate();
 
+
   useEffect(() => {
     loadBooks();
-  }, []);
+  }, [loadBooks]);
 
   const filtered = books.filter(
     (b) =>

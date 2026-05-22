@@ -10,15 +10,22 @@ use std::sync::LazyLock;
 static CHAPTER_PATTERNS: LazyLock<Vec<Regex>> = LazyLock::new(|| {
     vec![
         // 第X章, 第X节, 第X回, 第X卷
-        Regex::new(r"(?m)^[　\s]*(第[0-9零一二三四五六七八九十百千万亿]+[章节回卷部集篇](?:\s+.+)?)").unwrap(),
+        Regex::new(
+            r"(?m)^[　\s]*(第[0-9零一二三四五六七八九十百千万亿]+[章节回卷部集篇](?:\s+.+)?)",
+        )
+        .unwrap(),
         // Chapter X, Chapter X.Y
         Regex::new(r"(?m)^[　\s]*(Chapter\s+\d+[\.\d]*(?:\s+.+)?)").unwrap(),
         // Part X, Section X
         Regex::new(r"(?m)^[　\s]*(Part\s+\d+(?:\s+.+)?)").unwrap(),
         // 序章, 楔子, 尾声, 后记, 番外
-        Regex::new(r"(?m)^[　\s]*(序章|楔子|尾声|后记|番外|前言|引子|终章|尾声|附录|结局)(?:\s+.+)?$").unwrap(),
+        Regex::new(
+            r"(?m)^[　\s]*(序章|楔子|尾声|后记|番外|前言|引子|终章|尾声|附录|结局)(?:\s+.+)?$",
+        )
+        .unwrap(),
         // 卷X, 篇X
-        Regex::new(r"(?m)^[　\s]*(第[0-9零一二三四五六七八九十百千万亿]+[卷篇部])(?:\s+.+)?$").unwrap(),
+        Regex::new(r"(?m)^[　\s]*(第[0-9零一二三四五六七八九十百千万亿]+[卷篇部])(?:\s+.+)?$")
+            .unwrap(),
     ]
 });
 
@@ -56,7 +63,9 @@ fn split_chapters(content: &str) -> Vec<Chapter> {
     for pat in CHAPTER_PATTERNS.iter() {
         for cap in pat.captures_iter(content) {
             if let Some(m) = cap.get(0) {
-                let title = cap.get(1).map(|m| m.as_str().trim().to_string())
+                let title = cap
+                    .get(1)
+                    .map(|m| m.as_str().trim().to_string())
                     .unwrap_or_else(|| m.as_str().trim().to_string());
                 matches.push((m.start(), m.end(), title));
             }
@@ -71,7 +80,7 @@ fn split_chapters(content: &str) -> Vec<Chapter> {
     for (start, end, title) in matches {
         if unique_matches
             .last()
-            .map_or(true, |(prev_start, _, _)| start > *prev_start)
+            .is_none_or(|(prev_start, _, _)| start > *prev_start)
         {
             unique_matches.push((start, end, title));
         }
@@ -79,11 +88,7 @@ fn split_chapters(content: &str) -> Vec<Chapter> {
 
     // Build chapters from unique matches
     for (i, (match_start, _match_end, title)) in unique_matches.iter().enumerate() {
-        let prev_pos = if i > 0 {
-            unique_matches[i - 1].0
-        } else {
-            0
-        };
+        let prev_pos = if i > 0 { unique_matches[i - 1].0 } else { 0 };
 
         if *match_start > prev_pos {
             let prev_content = &content[prev_pos..*match_start];
