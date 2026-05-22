@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { useReaderStore, type StatsSummary } from "@/stores/readerStore";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { BookOpen, Clock, FileText } from "lucide-react";
-
+import { BookOpen, Clock, FileText, ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 function fmtDuration(seconds: number): string {
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
@@ -17,6 +18,7 @@ function fmtWords(n: number): string {
 }
 
 export function StatsPage() {
+  const navigate = useNavigate();
   const [stats, setStats] = useState<StatsSummary | null>(null);
   const [days, setDays] = useState(30);
 
@@ -41,7 +43,12 @@ export function StatsPage() {
   return (
     <div className="flex h-screen flex-col bg-background">
       <header className="flex items-center justify-between border-b px-6 py-4">
-        <h1 className="text-2xl font-bold">阅读统计</h1>
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <h1 className="text-2xl font-bold">阅读统计</h1>
+        </div>
         <select
           value={days}
           onChange={(e) => setDays(Number(e.target.value))}

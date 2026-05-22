@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useSourceStore } from "@/stores/sourceStore";
 import { Button } from "@/components/ui/button";
-import { Trash2, Upload } from "lucide-react";
+import { Trash2, Upload, ArrowLeft } from "lucide-react";
 
 export function SourceManagePage() {
+  const navigate = useNavigate();
   const { sources, loading, loadSources, importSource, deleteSource } = useSourceStore();
   const [importText, setImportText] = useState("");
 
@@ -20,7 +22,12 @@ export function SourceManagePage() {
   return (
     <div className="flex h-screen flex-col bg-background">
       <header className="flex items-center justify-between border-b px-6 py-4">
-        <h1 className="text-2xl font-bold">书源管理</h1>
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <h1 className="text-2xl font-bold">书源管理</h1>
+        </div>
       </header>
 
       <main className="flex-1 overflow-auto p-6">

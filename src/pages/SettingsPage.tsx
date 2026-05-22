@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Button } from "@/components/ui/button";
-import { Cloud, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
-
+import { Cloud, Loader2, CheckCircle2, AlertCircle, ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 interface SyncConfig {
   enabled: boolean;
   backend_type: string;
@@ -13,6 +13,7 @@ interface SyncConfig {
 }
 
 export function SettingsPage() {
+  const navigate = useNavigate();
   const [config, setConfig] = useState<SyncConfig>({
     enabled: false,
     backend_type: "webdav",
@@ -76,7 +77,12 @@ export function SettingsPage() {
   return (
     <div className="flex h-screen flex-col bg-background">
       <header className="flex items-center border-b px-6 py-4">
-        <h1 className="text-2xl font-bold">设置</h1>
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <h1 className="text-2xl font-bold">设置</h1>
+        </div>
       </header>
 
       <main className="flex-1 overflow-auto p-6">

@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useSourceStore } from "@/stores/sourceStore";
 import { Button } from "@/components/ui/button";
-import { Search, Loader2 } from "lucide-react";
+import { Search, Loader2, ArrowLeft } from "lucide-react";
 
 export function SearchPage() {
+  const navigate = useNavigate();
   const { sources, searchResults, searching, loadSources, searchBooks } = useSourceStore();
   const [keyword, setKeyword] = useState("");
   const [sourceId, setSourceId] = useState("");
@@ -27,7 +29,12 @@ export function SearchPage() {
   return (
     <div className="flex h-screen flex-col bg-background">
       <header className="flex items-center justify-between border-b px-6 py-4">
-        <h1 className="text-2xl font-bold">搜索书籍</h1>
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <h1 className="text-2xl font-bold">搜索书籍</h1>
+        </div>
       </header>
 
       <main className="flex-1 overflow-auto p-6">

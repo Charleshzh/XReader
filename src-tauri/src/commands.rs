@@ -714,3 +714,20 @@ fn load_sync_config(state: &State<AppState>) -> Result<crate::sync::types::SyncC
     }
     serde_json::from_str(&json_str).map_err(|e| e.to_string())
 }
+
+// ── Reader Settings Persistence ──
+
+#[tauri::command]
+pub fn save_reader_settings(state: State<AppState>, settings_json: String) -> Result<(), String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    crate::db::queries::set_setting(&db, "reader_settings", &settings_json)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn load_reader_settings(state: State<AppState>) -> Result<String, String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    crate::db::queries::get_setting(&db, "reader_settings")
+        .map_err(|e| e.to_string())
+        .map(|v| v.unwrap_or_default())
+}

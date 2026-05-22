@@ -1,10 +1,11 @@
 export interface ReaderSettings {
-  fontSize: number; // px, default 18
-  lineHeight: number; // multiplier, default 1.8
-  marginH: number; // horizontal margin %, default 5
-  marginV: number; // vertical margin px, default 40
+  fontSize: number;
+  lineHeight: number;
+  marginH: number;
+  marginV: number;
   theme: "light" | "dark" | "sepia";
   scrollMode: "paginated" | "scroll";
+  fontFamily: string;
 }
 
 export const DEFAULT_SETTINGS: ReaderSettings = {
@@ -14,6 +15,7 @@ export const DEFAULT_SETTINGS: ReaderSettings = {
   marginV: 40,
   theme: "light",
   scrollMode: "paginated",
+  fontFamily: "system-ui, -apple-system, sans-serif",
 };
 
 export interface ChapterInfo {

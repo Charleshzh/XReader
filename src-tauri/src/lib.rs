@@ -76,6 +76,8 @@ pub fn run() {
             commands::sync_now,
             commands::configure_sync,
             commands::get_sync_config,
+            commands::save_reader_settings,
+            commands::load_reader_settings,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -64,6 +64,7 @@ interface ReaderState {
   updateSettings: (partial: Partial<ReaderSettings>) => void;
   toggleToc: () => void;
   toggleSettings: () => void;
+  loadSavedSettings: () => Promise<void>;
 
   // Bookmark actions
   addBookmark: (label: string) => Promise<void>;
@@ -127,6 +128,7 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
         chapterIndex: 0,
       });
       set({ chapters, content, loading: false });
+      get().loadSavedSettings();
       get().loadBookmarks();
       get().loadAnnotations();
       get().startSession();
@@ -185,7 +187,14 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
     }
   },
 
-  updateSettings: (partial) => set((s) => ({ settings: { ...s.settings, ...partial } })),
+  updateSettings: (partial) => {
+    set((s) => {
+      const next = { ...s.settings, ...partial };
+      // Persist to backend (fire-and-forget)
+      invoke("save_reader_settings", { settingsJson: JSON.stringify(next) }).catch(() => {});
+      return { settings: next };
+    });
+  },
   toggleToc: () =>
     set((s) => ({
       tocOpen: !s.tocOpen,
@@ -315,7 +324,19 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
     return await invoke<StatsSummary>("get_reading_stats", { days });
   },
 
-  // (prefetchChapter is a module-level helper, not in the store)
+  loadSavedSettings: async () => {
+    try {
+      const json = await invoke<string>("load_reader_settings");
+      if (json) {
+        const saved = JSON.parse(json) as Partial<ReaderSettings>;
+        if (saved && typeof saved === "object") {
+          set((s) => ({ settings: { ...s.settings, ...saved } }));
+        }
+      }
+    } catch {
+      /* no saved settings yet */
+    }
+  },
 }));
 
 /** Prefetch a chapter in the background (fire-and-forget). */
