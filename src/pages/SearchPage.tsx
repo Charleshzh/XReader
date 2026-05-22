@@ -16,16 +16,13 @@ export function SearchPage() {
     void loadSources();
   }, [loadSources]);
 
-  useEffect(() => {
-    if (sources.length > 0 && !sourceId) {
-      setSourceId(sources[0].id);
-    }
-  }, [sources, sourceId]);
+  const activeSourceId = sourceId || sources[0]?.id || "";
 
   const handleSearch = () => {
-    if (!keyword.trim() || !sourceId) return;
-    void searchBooks(sourceId, keyword);
+    if (!keyword.trim() || !activeSourceId) return;
+    void searchBooks(activeSourceId, keyword);
   };
+
 
   return (
     <div className="flex h-screen flex-col bg-background">
@@ -41,7 +38,7 @@ export function SearchPage() {
       <main className="flex-1 overflow-auto p-6">
         <div className="mb-6 flex gap-3">
           <select
-            value={sourceId}
+            value={activeSourceId}
             onChange={(e) => setSourceId(e.target.value)}
             className="rounded border bg-background px-3 py-2 text-sm"
           >
@@ -91,9 +88,9 @@ export function SearchPage() {
                 </div>
                 <Button
                   variant="outline"
-                  disabled={!sourceId}
+                  disabled={!activeSourceId}
                   onClick={async () => {
-                    const added = await addRemoteBook(sourceId, result.book_url);
+                    const added = await addRemoteBook(activeSourceId, result.book_url);
                     navigate(`/reader/${added.id}`);
                   }}
                 >
