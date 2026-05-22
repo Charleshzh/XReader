@@ -4,8 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Search, Loader2 } from "lucide-react";
 
 export function SearchPage() {
-  const { sources, searchResults, searching, loadSources, searchBooks } =
-    useSourceStore();
+  const { sources, searchResults, searching, loadSources, searchBooks } = useSourceStore();
   const [keyword, setKeyword] = useState("");
   const [sourceId, setSourceId] = useState("");
 
@@ -77,13 +76,9 @@ export function SearchPage() {
                 )}
                 <div className="flex-1">
                   <h3 className="font-semibold">{r.name}</h3>
-                  {r.author && (
-                    <p className="text-sm text-muted-foreground">{r.author}</p>
-                  )}
+                  {r.author && <p className="text-sm text-muted-foreground">{r.author}</p>}
                   {r.intro && (
-                    <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
-                      {r.intro}
-                    </p>
+                    <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{r.intro}</p>
                   )}
                 </div>
               </div>
