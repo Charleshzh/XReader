@@ -113,6 +113,7 @@ cargo fmt && cargo clippy -- -D warnings && npx prettier --write "src/**/*.{ts,t
 | File                         | Content                                                                 |
 | ---------------------------- | ----------------------------------------------------------------------- |
 | `CLAUDE.md`                  | Full project reference (architecture, conventions, stack, IPC commands) |
+| `docs/USAGE.md`              | User manual — installation, import, reading, book sources, sync         |
 | `docs/CONTEXT.md`            | Domain model & terminology                                              |
 | `docs/phase-1-completion.md` | Phase 1: Scaffold, DB, CI                                               |
 | `docs/phase-2-completion.md` | Phase 2: Bookshelf + import                                             |

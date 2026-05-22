@@ -1,8 +1,8 @@
 //! Sync engine for cross-device cloud sync.
 
+pub mod crypto;
 pub mod types;
 pub mod webdav;
-
 use rusqlite::Connection;
 use serde::Serialize;
 use serde_json::Value;

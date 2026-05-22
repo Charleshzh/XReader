@@ -754,27 +754,33 @@ pub async fn sync_now(state: State<'_, AppState>) -> Result<crate::sync::SyncRes
 #[tauri::command]
 pub fn configure_sync(state: State<AppState>, config: serde_json::Value) -> Result<(), String> {
     let json_str = serde_json::to_string(&config).map_err(|e| e.to_string())?;
+    let encrypted = crate::sync::crypto::encrypt(&json_str)?;
     let db = state.db.lock().map_err(|e| e.to_string())?;
-    crate::db::queries::set_setting(&db, "sync_config", &json_str).map_err(|e| e.to_string())
+    crate::db::queries::set_setting(&db, "sync_config", &encrypted).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub fn get_sync_config(state: State<AppState>) -> Result<serde_json::Value, String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
-    let json_str = crate::db::queries::get_setting(&db, "sync_config")
+    let encrypted = crate::db::queries::get_setting(&db, "sync_config")
         .map_err(|e| e.to_string())?
         .unwrap_or_default();
-    serde_json::from_str(&json_str).map_err(|e| e.to_string())
+    if encrypted.is_empty() {
+        return Ok(serde_json::Value::Null);
+    }
+    let decrypted = crate::sync::crypto::decrypt(&encrypted).unwrap_or(encrypted); // Graceful fallback for old plaintext
+    serde_json::from_str(&decrypted).map_err(|e| e.to_string())
 }
 
 fn load_sync_config(state: &State<AppState>) -> Result<crate::sync::types::SyncConfig, String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
-    let json_str = crate::db::queries::get_setting(&db, "sync_config")
+    let encrypted = crate::db::queries::get_setting(&db, "sync_config")
         .map_err(|e| e.to_string())?
         .unwrap_or_default();
-    if json_str.is_empty() {
+    if encrypted.is_empty() {
         return Ok(Default::default());
     }
+    let json_str = crate::sync::crypto::decrypt(&encrypted).unwrap_or(encrypted); // Graceful fallback
     serde_json::from_str(&json_str).map_err(|e| e.to_string())
 }
 
