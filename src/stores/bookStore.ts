@@ -19,6 +19,9 @@ interface BookState {
 
   /** Toggle grid/list view */
   setViewMode: (mode: ViewMode) => void;
+
+  /** Add a remote book from a source result */
+  addRemoteBook: (sourceId: string, bookUrl: string) => Promise<ImportResult>;
 }
 
 export const useBookStore = create<BookState>((set, get) => ({
@@ -50,4 +53,10 @@ export const useBookStore = create<BookState>((set, get) => ({
   },
 
   setViewMode: (mode: ViewMode) => set({ viewMode: mode }),
+
+  addRemoteBook: async (sourceId: string, bookUrl: string) => {
+    const result = await invoke<ImportResult>("add_remote_book", { sourceId, bookUrl });
+    await get().loadBooks();
+    return result;
+  },
 }));

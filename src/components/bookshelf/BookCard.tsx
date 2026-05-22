@@ -30,41 +30,44 @@ const formatColor = (format: string) => {
       return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
     case "pdf":
       return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
+    case "remote":
+      return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200";
     default:
       return "bg-gray-100 text-gray-800";
   }
 };
 
+function resolveCoverSrc(book: BookItem): string | null {
+  if (!book.cover_path) return null;
+  return /^https?:\/\//i.test(book.cover_path) ? book.cover_path : convertFileSrc(book.cover_path);
+}
+
 export function BookCard({ book, onDelete, onOpen }: BookCardProps) {
-  const coverSrc = book.cover_path ? convertFileSrc(book.cover_path) : null;
+  const coverSrc = resolveCoverSrc(book);
 
   return (
     <div
       className="group relative flex cursor-pointer flex-col rounded-lg border bg-card p-3 shadow-sm transition-shadow hover:shadow-md"
       onClick={() => onOpen(book)}
     >
-      {/* Cover or placeholder */}
       <div className="mb-3 aspect-[3/4] w-full overflow-hidden rounded-md bg-muted">
         {coverSrc ? (
           <img src={coverSrc} alt={book.title} className="h-full w-full object-cover" />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-slate-200 to-slate-300 dark:from-slate-700 dark:to-slate-800">
-            <span className="text-center text-sm font-medium text-muted-foreground p-2 line-clamp-4">
+            <span className="line-clamp-4 p-2 text-center text-sm font-medium text-muted-foreground">
               {book.title}
             </span>
           </div>
         )}
       </div>
 
-      {/* Title */}
       <h3 className="mb-1 line-clamp-2 text-sm font-semibold leading-tight">{book.title}</h3>
 
-      {/* Author */}
       {book.author && (
         <p className="mb-2 line-clamp-1 text-xs text-muted-foreground">{book.author}</p>
       )}
 
-      {/* Format badge + chapters */}
       <div className="mt-auto flex items-center justify-between">
         <span
           className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${formatColor(book.format)}`}
@@ -74,7 +77,6 @@ export function BookCard({ book, onDelete, onOpen }: BookCardProps) {
         </span>
       </div>
 
-      {/* Delete button (visible on hover) */}
       <Button
         variant="ghost"
         size="icon"

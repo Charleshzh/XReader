@@ -14,6 +14,9 @@ const book: BookItem = {
   file_path: "test.epub",
   total_chapters: 2,
   updated_at: 1,
+  source_type: "local",
+  source_id: "",
+  source_url: "",
 };
 
 describe("useReaderStore", () => {

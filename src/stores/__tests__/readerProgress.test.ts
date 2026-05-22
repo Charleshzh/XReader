@@ -14,6 +14,9 @@ const book: BookItem = {
   file_path: "demo.epub",
   total_chapters: 3,
   updated_at: 1,
+  source_type: "local",
+  source_id: "",
+  source_url: "",
 };
 
 describe("reader progress and bookmark position", () => {

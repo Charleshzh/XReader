@@ -4,10 +4,13 @@ export interface BookItem {
   title: string;
   author: string;
   cover_path: string;
-  format: "epub" | "txt" | "pdf";
+  format: "epub" | "txt" | "pdf" | "remote";
   file_path: string;
   total_chapters: number;
   updated_at: number;
+  source_type: "local" | "remote";
+  source_id: string;
+  source_url: string;
 }
 
 /** Returned from import_book command */

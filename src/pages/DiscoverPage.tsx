@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSourceStore } from "@/stores/sourceStore";
+import { useBookStore } from "@/stores/bookStore";
 import type { ExploreBook } from "@/stores/sourceStore";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
@@ -8,6 +9,7 @@ import { ArrowLeft, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 export function DiscoverPage() {
   const navigate = useNavigate();
   const { sources, exploreBooks, loadSources } = useSourceStore();
+  const { addRemoteBook } = useBookStore();
   const [sourceId, setSourceId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [books, setBooks] = useState<ExploreBook[]>([]);
@@ -15,7 +17,7 @@ export function DiscoverPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    loadSources();
+    void loadSources();
   }, [loadSources]);
 
   const activeSourceId = sourceId ?? (sources.length > 0 ? sources[0].id : "");
@@ -38,20 +40,20 @@ export function DiscoverPage() {
   const handleSourceChange = (sid: string) => {
     setSourceId(sid);
     setPage(1);
-    loadPage(sid, 1);
+    void loadPage(sid, 1);
   };
 
   const handlePrev = () => {
-    const p = page - 1;
-    if (p < 1) return;
-    setPage(p);
-    loadPage(activeSourceId, p);
+    const nextPage = page - 1;
+    if (nextPage < 1) return;
+    setPage(nextPage);
+    void loadPage(activeSourceId, nextPage);
   };
 
   const handleNext = () => {
-    const p = page + 1;
-    setPage(p);
-    loadPage(activeSourceId, p);
+    const nextPage = page + 1;
+    setPage(nextPage);
+    void loadPage(activeSourceId, nextPage);
   };
 
   return (
@@ -83,7 +85,7 @@ export function DiscoverPage() {
         {error ? (
           <div className="flex h-full flex-col items-center justify-center gap-3">
             <p className="text-destructive">{error}</p>
-            <Button variant="outline" onClick={() => loadPage(activeSourceId, page)}>
+            <Button variant="outline" onClick={() => void loadPage(activeSourceId, page)}>
               重试
             </Button>
           </div>
@@ -92,7 +94,7 @@ export function DiscoverPage() {
             <Button
               variant="outline"
               disabled={!activeSourceId}
-              onClick={() => loadPage(activeSourceId, 1)}
+              onClick={() => void loadPage(activeSourceId, 1)}
             >
               加载首页
             </Button>
@@ -105,9 +107,9 @@ export function DiscoverPage() {
         ) : (
           <>
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-              {books.map((book, i) => (
+              {books.map((book, index) => (
                 <div
-                  key={`${book.book_url}-${i}`}
+                  key={`${book.book_url}-${index}`}
                   className="group flex cursor-pointer flex-col rounded-lg border bg-card p-3 shadow-sm transition-shadow hover:shadow-md"
                 >
                   <div className="mb-3 aspect-[3/4] w-full overflow-hidden rounded-md bg-muted">
@@ -130,8 +132,19 @@ export function DiscoverPage() {
                     {book.name}
                   </h3>
                   {book.author && (
-                    <p className="line-clamp-1 text-xs text-muted-foreground">{book.author}</p>
+                    <p className="mb-3 line-clamp-1 text-xs text-muted-foreground">{book.author}</p>
                   )}
+                  <Button
+                    size="sm"
+                    disabled={!activeSourceId}
+                    onClick={async (event) => {
+                      event.stopPropagation();
+                      const added = await addRemoteBook(activeSourceId, book.book_url);
+                      navigate(`/reader/${added.id}`);
+                    }}
+                  >
+                    加入书架
+                  </Button>
                 </div>
               ))}
             </div>
