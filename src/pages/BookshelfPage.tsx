@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useBookStore } from "@/stores/bookStore";
 import { BookCard } from "@/components/bookshelf/BookCard";
 import { ImportDialog } from "@/components/bookshelf/ImportDialog";
-import { LayoutGrid, List, Plus, Search, X, BarChart3 } from "lucide-react";
+import { LayoutGrid, List, Plus, Search, X, BarChart3, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { BookItem } from "@/types/book";
 
@@ -57,6 +57,14 @@ export function BookshelfPage() {
           {/* Stats */}
           <Button variant="ghost" size="icon" onClick={() => navigate("/stats")}>
             <BarChart3 className="h-4 w-4" />
+          </Button>
+          {/* Search */}
+          <Button variant="ghost" size="icon" onClick={() => navigate("/search")}>
+            <Search className="h-4 w-4" />
+          </Button>
+          {/* Sources */}
+          <Button variant="ghost" size="icon" onClick={() => navigate("/sources")}>
+            <Globe className="h-4 w-4" />
           </Button>
           {/* View mode toggle */}
           <Button

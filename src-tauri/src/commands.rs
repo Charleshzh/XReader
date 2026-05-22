@@ -523,3 +523,133 @@ pub fn get_reading_stats(state: State<AppState>, days: i64) -> Result<StatsSumma
         daily,
     })
 }
+
+// ── Book Source Management ──
+
+#[derive(serde::Serialize)]
+pub struct SourceListItem {
+    pub id: String,
+    pub name: String,
+    pub base_url: String,
+    pub enabled: bool,
+    pub created_at: i64,
+}
+
+#[tauri::command]
+pub fn import_book_source(
+    state: State<AppState>,
+    json_str: String,
+) -> Result<SourceListItem, String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    let id = uuid::Uuid::new_v4().to_string();
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs() as i64;
+
+    // Parse JSON to extract name and base_url
+    let json_val: serde_json::Value =
+        serde_json::from_str(&json_str).map_err(|e| format!("Invalid JSON: {}", e))?;
+    let name = json_val["bookSourceName"]
+        .as_str()
+        .unwrap_or("Unnamed Source")
+        .to_string();
+    let base_url = json_val["bookSourceUrl"]
+        .as_str()
+        .unwrap_or("")
+        .to_string();
+
+    db.execute(
+        "INSERT INTO book_sources (id, name, base_url, enabled, rule_json, created_at, updated_at)
+         VALUES (?1, ?2, ?3, 1, ?4, ?5, ?6)",
+        rusqlite::params![id, name, base_url, json_str, now, now],
+    )
+    .map_err(|e| e.to_string())?;
+
+    Ok(SourceListItem {
+        id,
+        name,
+        base_url,
+        enabled: true,
+        created_at: now,
+    })
+}
+
+#[tauri::command]
+pub fn list_book_sources(
+    state: State<AppState>,
+) -> Result<Vec<SourceListItem>, String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    let mut stmt = db
+        .prepare(
+            "SELECT id, name, base_url, enabled, created_at FROM book_sources ORDER BY created_at DESC",
+        )
+        .map_err(|e| e.to_string())?;
+
+    let rows = stmt
+        .query_map([], |row| {
+            Ok(SourceListItem {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                base_url: row.get(2)?,
+                enabled: row.get::<_, i64>(3)? != 0,
+                created_at: row.get(4)?,
+            })
+        })
+        .map_err(|e| e.to_string())?;
+
+    rows.collect::<Result<Vec<_>, _>>().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn delete_book_source(state: State<AppState>, id: String) -> Result<(), String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    db.execute("DELETE FROM book_sources WHERE id = ?1", rusqlite::params![id])
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[derive(serde::Serialize)]
+pub struct SearchBookResult {
+    pub name: String,
+    pub author: String,
+    pub cover_url: String,
+    pub intro: String,
+    pub book_url: String,
+}
+
+#[tauri::command]
+pub async fn search_books(
+    state: State<'_, AppState>,
+    source_id: String,
+    keyword: String,
+    page: u32,
+) -> Result<Vec<SearchBookResult>, String> {
+    let json_str: String = {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        db.query_row(
+            "SELECT rule_json FROM book_sources WHERE id = ?1",
+            rusqlite::params![source_id],
+            |row| row.get(0),
+        )
+        .map_err(|e| e.to_string())?
+    };
+
+    let json_val: serde_json::Value =
+        serde_json::from_str(&json_str).map_err(|e| format!("Invalid source JSON: {}", e))?;
+    let compiled = crate::source::compile_source(&json_val).map_err(|e| e.to_string())?;
+    let mut pipeline = crate::source::SourcePipeline::new(compiled);
+
+    let results = pipeline.search(&keyword, page).await.map_err(|e| e.to_string())?;
+
+    Ok(results
+        .into_iter()
+        .map(|r| SearchBookResult {
+            name: r.name,
+            author: r.author,
+            cover_url: r.cover_url,
+            intro: r.intro,
+            book_url: r.book_url,
+        })
+        .collect())
+}
