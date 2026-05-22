@@ -11,6 +11,7 @@ Tauri v2 + React 19 + TypeScript desktop app for reading local books (EPUB/TXT/P
 | Desktop     | Tauri                     | v2.11.2        |
 | UI          | React + TypeScript        | 19.2.6 / 5.8.3 |
 | Build       | Vite                      | 7.3.3          |
+| Virtual     | @tanstack/react-virtual   | 3.13.25        |
 | CSS         | Tailwind CSS              | 3.4.19         |
 | Components  | shadcn/ui                 | Button         |
 | State       | Zustand                   | 5.0.13         |
@@ -57,9 +58,8 @@ cargo fmt --check
 xreader/
 ├── src/                          # React frontend
 │   ├── main.tsx                  # Entry
-│   ├── App.tsx                   # Router: / /reader/:id /stats /sources /search /settings
+│   ├── App.tsx                   # Router: / /reader/:id /stats /sources /search /settings /discover
 │   ├── globals.css               # Tailwind + shadcn CSS vars
-│   ├── lib/utils.ts              # cn() helper
 │   ├── types/                    # book.ts, reader.ts
 │   ├── stores/                   # bookStore, readerStore, sourceStore
 │   ├── components/
@@ -68,11 +68,10 @@ xreader/
 │   │   └── reader/               # ReaderShell, HtmlContentView, PdfContentView,
 │   │                               ChapterTOC, ReaderSettings, BookmarkPanel, AnnotationPanel
 │   └── pages/                    # BookshelfPage, ReaderPage, StatsPage,
-│                                   SearchPage, SourceManagePage, SettingsPage
+│                                   SearchPage, SourceManagePage, SettingsPage, DiscoverPage
 ├── src-tauri/                    # Rust backend
 │   ├── src/
-│   │   ├── main.rs / lib.rs      # Entry + AppState + 24 command registration
-│   │   ├── commands.rs           # All IPC commands
+│   │   ├── main.rs / lib.rs      # Entry + AppState + 27 command registration
 │   │   ├── book/                 # BookFormat trait + EPUB/TXT/PDF parsers
 │   │   ├── db/                   # SQLite init, models, queries, V1 migration
 │   │   ├── source/               # Legado rule engine (Phase 5)
@@ -81,7 +80,7 @@ xreader/
 │   │   │   ├── types.rs          # RuleSegment, CompiledSource, etc.
 │   │   │   ├── http.rs           # reqwest client + encoding detection
 │   │   │   ├── evaluator/        # 6 evaluators (css/xpath/json/regex/js/template)
-│   │   │   └── pipeline/         # 4 pipelines (search/book_info/chapter_list/content)
+│   │   │   └── pipeline/         # 5 pipelines (search/explore/book_info/chapter_list/content)
 │   │   └── sync/                 # Phase 6: WebDAV sync (types/webdav/mod)
 │   ├── Cargo.toml
 │   └── tauri.conf.json
@@ -90,7 +89,7 @@ xreader/
 └── package.json / tailwind.config.js / eslint.config.js / ...
 ```
 
-## IPC Commands (24 total)
+## IPC Commands (28 total)
 
 | #   | Command                  | Phase | Category        |
 | --- | ------------------------ | ----- | --------------- |
@@ -118,19 +117,23 @@ xreader/
 | 22  | `sync_now`               | 6     | Sync (async)    |
 | 23  | `configure_sync`         | 6     | Sync            |
 | 24  | `get_sync_config`        | 6     | Sync            |
+| 25  | `save_reader_settings`   | 7     | Reader Settings |
+| 26  | `load_reader_settings`   | 7     | Reader Settings |
+| 27  | `explore_books`          | 5d    | Sources (async) |
+| 28  | `write_file`             | 4     | Export          |
 
 ## Rule Engine (Phase 5)
 
-Tokeninzer → Compiler → 6 Evaluators → 4 Pipelines.
+Tokeninzer → Compiler → 6 Evaluators → 5 Pipelines.
 
 ```
 Legado JSON → compile_source() → CompiledSource
                                    │
                           SourcePipeline
-                    ┌──────────┼──────────┐
-                 Search   BookInfo  ChapterList  ChapterContent
-                    │         │         │           │
-                    └─────────┴─────────┴───────────┘
+                    ┌──────────┼──────────┬──────────┐
+                 Search   Explore  BookInfo  ChapterList  ChapterContent
+                    │         │         │         │           │
+                    └─────────┴─────────┴─────────┴───────────┘
                                    │
                            RuleEvaluator
               CssEval | XpathEval | JsonEval | RegexEval | JsEval | TmplEval
@@ -151,13 +154,13 @@ Legado JSON → compile_source() → CompiledSource
 
 **Done (Phase 1–7 — MVP Complete)**:
 
-- Bookshelf + import (EPUB/TXT/PDF)
-- Reader core (HTML + pdf.js, chapter TOC, settings, themes)
-- Bookmarks + annotations + reading stats with charts
-- Legado rule engine: Tokenizer, 6 evaluators, 4 pipelines
-- Source management: import/delete, online search
-- Cloud sync: WebDAV backend, SyncBackend trait, settings page
+- Bookshelf + import (EPUB/TXT/PDF) with virtual list (@tanstack/react-virtual)
+- Reader core (HTML + pdf.js, chapter TOC, sliders, fonts, click-zone page turns)
+- Bookmarks + annotations + reading stats with charts + Markdown export
+- Legado rule engine: Tokenizer, 6 evaluators, 5 pipelines (incl. explore/discover)
+- Source management: import/delete, online search, discover page
+- Cloud sync: WebDAV bidirectional timestamp-based sync, SyncBackend trait
 - Polish: chapter prefetch, ErrorBoundary, env_logger, auto-updater plugin
-- 24 IPC commands, CI passing
+- 28 IPC commands, CI passing
 
 **Future**: Phase 8 (TTS/MOBI/dictionary/mobile) — optional post-MVP

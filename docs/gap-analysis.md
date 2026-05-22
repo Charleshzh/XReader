@@ -2,8 +2,7 @@
 
 **日期**: 2026-05-22  
 **基准**: `docs/XReader_Novel_Reader_Plan.md` Phase 1-7  
-**实际完成**: 26 commits, Phase 1-7 MVP 交付 + 5 UX 改进 (a57a26c)
----
+**实际完成**: 28 commits, Phase 1-7 MVP + 4 高优先级缺口关闭 (d70b1c3)
 
 ## 1. 各阶段完成度
 
@@ -12,17 +11,15 @@
 | 1     | 基础架构           | 8/8  | 100%   | —                                                               |
 | 2     | 书架导入           | 8/8  | 100%   | —                                                               |
 | 3     | 阅读器核心         | 8/10 | 80%    | epub.js 未用（改用 Rust 后端提取 HTML）；epub.js 备选方案未评估 |
-| 4     | 书签/笔记/统计     | 7/8  | 88%    | 标注导出 JSON/Markdown 未实现                                   |
+| 4     | 书签/笔记/统计     | 8/8  | 100%   | —                                                               |
 | 5a    | Tokenizer+Compiler | 6/6  | 100%   | —                                                               |
 | 5b    | RuleEvaluator      | 6/6  | 100%   | 39/47 测试通过，8 个边缘用例 ignored                            |
 | 5c    | SourcePipeline     | 4/5  | 80%    | 集成测试（真实书源+HTML fixture）未完成                         |
-| 5d    | 书源管理 UI        | 4/5  | 80%    | 发现页（ruleExplore）未实现；书源启用/禁用/分组/排序仅基础实现  |
-| 6     | 云同步             | 4/5  | 80%    | 完整双向合并逻辑（merge_table_data）未实现                      |
-| 7     | 打磨发布           | 4/7  | 57%    | 虚拟列表、macOS DMG/Linux AppImage 打包、平台兼容测试未完成     |
+| 5d    | 书源管理 UI        | 5/5  | 100%   | —                                                               |
+| 6     | 云同步             | 5/5  | 100%   | —                                                               |
+| 7     | 打磨发布           | 5/7  | 71%    | macOS DMG/Linux AppImage 打包、平台兼容测试未完成               |
 
-**Overall Phase 1-7**: 59/72 项 = **82%**
-
----
+**Overall Phase 1-7**: 63/72 项 = **87%**
 
 ## 2. 未实现功能清单
 

@@ -15,11 +15,11 @@ A discrete reading unit within a book. Local books: parsed from file structure (
 
 ### Bookshelf (书架)
 
-The library view. Grid or list layout. Supports search by title/author, import via file dialog, delete with cascade.
+The library view. Grid or list layout, virtualized with `@tanstack/react-virtual` for performance with 100+ books. Adaptive column count via ResizeObserver. Supports search by title/author, import via file dialog, delete with cascade.
 
 ### Reader (阅读器)
 
-The reading view. EPUB/TXT use `HtmlContentView` (Rust-extracted chapter HTML, `dangerouslySetInnerHTML`). PDF uses `PdfContentView` (pdfjs-dist Canvas, zoom 0.5-3x). Modes: scroll (continuous, debounced progress save) or paginated (keyboard/button chapter nav). Settings panel: font size (7 presets 14-28px), line height (6 presets 1.4-2.5x), theme (light/dark/sepia). Chapter TOC sidebar for navigation.
+The reading view. EPUB/TXT use `HtmlContentView` (Rust-extracted chapter HTML, `dangerouslySetInnerHTML`). PDF uses `PdfContentView` (pdfjs-dist Canvas, zoom 0.5-3x). Modes: scroll (continuous, debounced progress save) or paginated (click zones: left 30% = prev chapter, right 30% = next). Settings panel: font size (range slider 10-32px), line height (range slider 1.0-3.0x), font family (5 presets incl. system/serif/sans-serif/KaiTi), theme (light/dark/sepia). All reader settings persisted to `app_settings` table. Chapter TOC sidebar for navigation.
 
 ### Reading Progress (阅读进度)
 
@@ -73,16 +73,21 @@ A Legado DSL expression using `@` as separator, `.` as selector chain. Structure
 - `{{ }}`: URL template variable (`{{key}}`, `{{page}}`)
 - `{$. }`: cross-step JSONPath variable (`{$.tocUrl}`)
 
-### Engine Pipeline (4 stages)
+### Engine Pipeline (5 stages)
 
 1. **Tokenizer**: splits rule string by `@`, `||`, `##` → token stream
 2. **Compiler**: parses tokens → Rule AST (`Vec<RuleSegment>`), cached per source
 3. **Evaluator**: 6 evaluators (Css/Xpath/Json/Regex/Js/Template) execute against HTML/JSON input
-4. **Pipeline**: orchestrates HTTP → evaluate → extract for 4 operations:
+4. **Pipeline**: orchestrates HTTP → evaluate → extract for 5 operations:
    - **Search**: searchUrl → bookList → Vec\<SearchResult\>
+   - **Explore**: exploreUrl → exploreBookList → Vec\<ExploreResult\>
    - **BookInfo**: detail page → name/author/cover/intro/tocUrl → BookInfo
    - **ChapterList**: toc page → chapterList → Vec\<Chapter\>
    - **ChapterContent**: chapter page → content + replaceRegex → cleaned HTML
+
+### Discover Page (发现页)
+
+Frontend page at `/discover` that uses the Explore pipeline to show a book source's homepage/ranking/recommendations. Source selector dropdown, paginated book grid with covers. Driven by `explore_books` Tauri command → `ruleExplore` JSON rules.
 
 ### Content Cleaning (正文清洗)
 
@@ -96,7 +101,7 @@ Remote chapter content cached to disk. Preload: current chapter ± 2 adjacent. T
 
 ### WebDAV Sync
 
-User provides WebDAV endpoint (e.g. Nutstore/Nextcloud). Sync scope: books metadata, reading progress, bookmarks, annotations, book sources. Strategy: timestamp-based incremental, conflict = latest wins. Implemented in `sync/types.rs` (SyncBackend trait), `sync/webdav.rs` (WebDAV client), `sync/mod.rs` (SyncEngine).
+User provides WebDAV endpoint (e.g. Nutstore/Nextcloud). Sync scope: books metadata, reading progress, bookmarks, annotations, book sources. Strategy: timestamp-based incremental, conflict = latest wins. **Bidirectional**: 3-phase approach (snapshot → network → merge) for full round-trip. Merge handles 5 sync tables with per-row `updated_at` comparison. Implemented in `sync/types.rs` (SyncBackend trait), `sync/webdav.rs` (WebDAV client), `sync/mod.rs` (SyncEngine + SyncSnapshot + merge_row).
 
 ```rust
 pub trait SyncBackend: Send + Sync {
@@ -133,5 +138,9 @@ Chapter prefetch: `loadChapter` triggers background fetch of +/-1 adjacent chapt
 `tauri-plugin-updater` configured with passive install mode. Update endpoint hosted on GitHub Releases. Permission added to `capabilities/default.json`.
 
 ### BookFormat Trait (extensibility)
+
+### Export (导出)
+
+Bookmarks and annotations can be exported to Markdown files. Uses Tauri `save` dialog to pick output path, then `write_file` Rust command. Bookmark export: chapter title + label per entry. Annotation export: chapter title + quoted text + user note.
 
 All format parsers implement `BookFormat`. `FormatRegistry` maps extension → parser. Adding a format = implement trait + register; zero changes to existing code.

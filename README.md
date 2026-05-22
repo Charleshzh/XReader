@@ -2,7 +2,7 @@
 
 Tauri v2 desktop app for reading local books (EPUB/TXT/PDF) and web-sourced novels via Legado-compatible book source rule engine.
 
-**Status**: Phase 7 complete — MVP delivered.
+**Status**: Phase 7 complete — MVP delivered with all high-priority gaps closed (87% plan completion).
 
 ## Quick Start
 
@@ -16,15 +16,15 @@ pnpm tauri dev
 ### Bookshelf & Import
 
 - EPUB metadata/cover/chapters extraction, TXT encoding detection (GBK/UTF-8/Big5) + regex chapter split, PDF import
-- Grid/list views, search filter, cover images, format badges, multi-file import dialog
+- Grid/list views with virtualized rendering (@tanstack/react-virtual), search filter, cover images, format badges, multi-file import dialog
 
 ### Reader Core
 
 - EPUB/TXT HTML rendering (scroll or paginated), PDF canvas rendering (pdf.js, zoom 0.5-3x)
 - Chapter TOC sidebar with jump navigation
-- Settings panel: font size (14-28px), line height (1.4-2.5x), theme (light/dark/sepia), scroll/page mode
-- Reading progress auto-save and restore
-- Keyboard navigation (Arrow keys)
+- Settings panel: font size slider (10-32px), line height slider (1.0-3.0x), font family (system/serif/sans-serif/KaiTi/monospace), theme (light/dark/sepia), scroll/page mode
+- Reading progress auto-save and restore; all reader settings persisted
+- Keyboard navigation (Arrow keys) + click-zone page turns (left/right 30%)
 
 ### Bookmarks & Annotations
 
@@ -41,14 +41,24 @@ pnpm tauri dev
 
 - Tokenizer + Compiler: parse Legado rule DSL (`@`/`||`/`##`/`{{key}}`/`{$.field}`)
 - 6 evaluators: CSS (scraper), XPath (sxd-xpath), JSONPath, Regex, JS (rquickjs/QuickJS), Template
-- 4 pipelines: Search, BookInfo, ChapterList, ChapterContent
-- Source management: import/export Legado JSON, online search from book sources
+- 5 pipelines: Search, Explore (discover page), BookInfo, ChapterList, ChapterContent
+- Source management: import/export Legado JSON, online search + discover from book sources
 
 ### Cloud Sync
 
-- WebDAV backend with Basic Auth
-- SyncBackend trait for pluggable sync providers
-- Settings page for endpoint/credential configuration
+- WebDAV backend with Basic Auth, bidirectional timestamp-based incremental sync
+- SyncBackend trait for pluggable sync providers (WebDAV, S3, REST)
+- 3-phase sync: snapshot → network → merge with automatic conflict resolution
+
+### Data Export
+
+- Bookmark export to Markdown: chapter title + label with save dialog
+- Annotation export to Markdown: chapter title + quoted text + note
+
+### Settings & UX
+
+- Reader settings persisted to SQLite (font size, line height, font family, theme, mode)
+- Back navigation on all sub-pages (stats, search, sources, settings, discover)
 
 ## Tech Stack
 
@@ -59,7 +69,8 @@ pnpm tauri dev
 | CSS       | Tailwind CSS 3 + shadcn/ui                             |
 | State     | Zustand 5                                              |
 | Router    | react-router-dom 7                                     |
-| DB        | SQLite (rusqlite bundled) + refinery migrations        |
+| Virtual   | @tanstack/react-virtual 3                              |
+| Dialog    | @tauri-apps/plugin-dialog 2                            |
 | EPUB      | epub crate                                             |
 | PDF       | pdfjs-dist 5.7 (frontend), lopdf (metadata)            |
 | Encoding  | encoding_rs                                            |
