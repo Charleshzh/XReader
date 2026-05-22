@@ -2,7 +2,7 @@
 
 Tauri v2 + React 19 + TypeScript desktop app for reading local books (EPUB/TXT/PDF) and web-sourced novels via Legado-compatible book source rule engine.
 
-**Status**: Phase 5 complete. Entering Phase 6 (cloud sync).
+**Status**: Phase 6 complete. Entering Phase 7 (polish + release).
 
 ## Tech Stack
 
@@ -29,6 +29,7 @@ Tauri v2 + React 19 + TypeScript desktop app for reading local books (EPUB/TXT/P
 | JS Engine | rquickjs (QuickJS) | 0.11 |
 | HTTP | reqwest + cookie_store | 0.13 / 0.22 |
 | Charts | recharts (frontend) | 3.8 |
+| Sync | async-trait + chrono | 0.1 / 0.4 |
 | Package | pnpm | 11.2.2 |
 
 ## Quick Commands
@@ -54,7 +55,7 @@ cargo fmt --check
 xreader/
 ├── src/                          # React frontend
 │   ├── main.tsx                  # Entry
-│   ├── App.tsx                   # Router: / /reader/:id /stats /sources /search
+│   ├── App.tsx                   # Router: / /reader/:id /stats /sources /search /settings
 │   ├── globals.css               # Tailwind + shadcn CSS vars
 │   ├── lib/utils.ts              # cn() helper
 │   ├── types/                    # book.ts, reader.ts
@@ -65,10 +66,10 @@ xreader/
 │   │   └── reader/               # ReaderShell, HtmlContentView, PdfContentView,
 │   │                               ChapterTOC, ReaderSettings, BookmarkPanel, AnnotationPanel
 │   └── pages/                    # BookshelfPage, ReaderPage, StatsPage,
-│                                   SearchPage, SourceManagePage
+│                                   SearchPage, SourceManagePage, SettingsPage
 ├── src-tauri/                    # Rust backend
 │   ├── src/
-│   │   ├── main.rs / lib.rs      # Entry + AppState + 21 command registration
+│   │   ├── main.rs / lib.rs      # Entry + AppState + 24 command registration
 │   │   ├── commands.rs           # All IPC commands
 │   │   ├── book/                 # BookFormat trait + EPUB/TXT/PDF parsers
 │   │   ├── db/                   # SQLite init, models, queries, V1 migration
@@ -79,15 +80,15 @@ xreader/
 │   │   │   ├── http.rs           # reqwest client + encoding detection
 │   │   │   ├── evaluator/        # 6 evaluators (css/xpath/json/regex/js/template)
 │   │   │   └── pipeline/         # 4 pipelines (search/book_info/chapter_list/content)
-│   │   └── sync/                 # Phase 6: cloud sync (stubs)
+│   │   └── sync/                 # Phase 6: WebDAV sync (types/webdav/mod)
 │   ├── Cargo.toml
 │   └── tauri.conf.json
-├── docs/                         # phase-1 through phase-5 completion reports
+├── docs/                         # phase-1 through phase-6 completion reports
 ├── .github/workflows/ci.yml      # CI: cargo check/test/clippy/fmt + tsc/eslint/prettier
 └── package.json / tailwind.config.js / eslint.config.js / ...
 ```
 
-## IPC Commands (21 total)
+## IPC Commands (24 total)
 
 | # | Command | Phase | Category |
 |---|---------|-------|----------|
@@ -112,6 +113,9 @@ xreader/
 | 19 | `list_book_sources` | 5 | Sources |
 | 20 | `delete_book_source` | 5 | Sources |
 | 21 | `search_books` | 5 | Sources (async) |
+| 22 | `sync_now` | 6 | Sync (async) |
+| 23 | `configure_sync` | 6 | Sync |
+| 24 | `get_sync_config` | 6 | Sync |
 
 ## Rule Engine (Phase 5)
 
@@ -142,15 +146,17 @@ Legado JSON → compile_source() → CompiledSource
 
 ## Current State & Next Steps
 
-**Done (Phase 1–5)**:
+**Done (Phase 1–6)**:
 - Bookshelf + import (EPUB/TXT/PDF)
 - Reader core (HTML + pdf.js, chapter TOC, settings, themes)
 - Bookmarks + annotations + reading stats with charts
 - Legado rule engine: Tokenizer, 6 evaluators, 4 pipelines
 - Source management: import/delete, online search
-- 21 IPC commands, CI passing
+- Cloud sync: WebDAV backend, SyncBackend trait, settings page
+- 24 IPC commands, CI passing
 
-**Next: Phase 6 — Cloud Sync (20-40h)**
-- WebDAV client, SyncBackend trait, incremental sync, conflict resolution
+**Next: Phase 7 — Polish & Release (20-40h)**
+- Performance optimization (chapter preload, virtual list)
+- Error handling + logging, packaging, auto-update
 
-**Future**: Phase 7 (polish), Phase 8 (TTS/MOBI/dictionary/mobile)
+**Future**: Phase 8 (TTS/MOBI/dictionary/mobile)

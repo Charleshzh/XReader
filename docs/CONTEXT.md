@@ -76,12 +76,10 @@ A Legado DSL expression using `@` as separator, `.` as selector chain. Structure
 ### Chapter Caching
 Remote chapter content cached to disk. Preload: current chapter ± 2 adjacent. TTL: 24 hours. Manual refresh supported.
 
-## Sync (同步)
+## Sync (同步) — ✅ Phase 6 implemented
 
 ### WebDAV Sync
-User provides WebDAV endpoint (e.g. Nutstore/Nextcloud). Sync scope: books metadata, reading progress, bookmarks, annotations, book sources. Strategy: timestamp-based incremental, conflict = latest wins.
-
-### SyncBackend trait
+User provides WebDAV endpoint (e.g. Nutstore/Nextcloud). Sync scope: books metadata, reading progress, bookmarks, annotations, book sources. Strategy: timestamp-based incremental, conflict = latest wins. Implemented in `sync/types.rs` (SyncBackend trait), `sync/webdav.rs` (WebDAV client), `sync/mod.rs` (SyncEngine).
 ```rust
 pub trait SyncBackend: Send + Sync {
     async fn upload(&self, key: &str, data: &[u8]) -> Result<()>;
