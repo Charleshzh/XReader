@@ -1,0 +1,69 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { invoke } from "@tauri-apps/api/core";
+import type { BookItem } from "@/types/book";
+import { DEFAULT_SETTINGS } from "@/types/reader";
+import { useReaderStore } from "@/stores/readerStore";
+
+const mockInvoke = vi.mocked(invoke);
+const book: BookItem = {
+  id: "book-1",
+  title: "测试书",
+  author: "作者",
+  cover_path: "",
+  format: "epub",
+  file_path: "test.epub",
+  total_chapters: 2,
+  updated_at: 1,
+};
+
+describe("useReaderStore", () => {
+  beforeEach(() => {
+    useReaderStore.setState({
+      book: null,
+      chapters: [],
+      currentChapter: 0,
+      content: "",
+      loading: false,
+      settings: DEFAULT_SETTINGS,
+      tocOpen: false,
+      settingsOpen: false,
+      bookmarks: [],
+      bookmarksOpen: false,
+      annotations: [],
+      annotationsOpen: false,
+      selectedAnnotation: null,
+      sessionSeconds: 0,
+      sessionWords: 0,
+      isReading: false,
+    });
+    mockInvoke.mockReset();
+  });
+
+  it("opens a book and loads chapters and content", async () => {
+    mockInvoke
+      .mockResolvedValueOnce([
+        { index: 0, title: "第一章" },
+        { index: 1, title: "第二章" },
+      ])
+      .mockResolvedValueOnce("<p>正文</p>")
+      .mockResolvedValueOnce("")
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
+
+    await useReaderStore.getState().openBook(book);
+
+    expect(useReaderStore.getState().book?.id).toBe("book-1");
+    expect(useReaderStore.getState().chapters).toHaveLength(2);
+    expect(useReaderStore.getState().content).toContain("正文");
+    expect(useReaderStore.getState().isReading).toBe(true);
+  });
+
+  it("keeps panel toggles mutually exclusive", () => {
+    useReaderStore.getState().toggleToc();
+    expect(useReaderStore.getState().tocOpen).toBe(true);
+
+    useReaderStore.getState().toggleSettings();
+    expect(useReaderStore.getState().settingsOpen).toBe(true);
+    expect(useReaderStore.getState().tocOpen).toBe(false);
+  });
+});
