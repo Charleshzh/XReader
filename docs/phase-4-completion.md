@@ -4,6 +4,8 @@
 **分支**: `main` (commit `a2a299a`)  
 **状态**: ✅ 全部 8 项任务完成
 
+> Historical snapshot: this document records the project state when Phase 4 was completed. For the current verified status, see `README.md`.
+
 ---
 
 ## 1. 交付清单

@@ -4,6 +4,8 @@
 **分支**: `main` (首次提交 `b6de97a`)  
 **状态**: ✅ 全部 8 项任务完成
 
+> Historical snapshot: this document records the project state when Phase 1 was completed. For the current verified status, see `README.md`.
+
 ---
 
 ## 1. 交付清单

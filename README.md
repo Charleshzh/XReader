@@ -2,7 +2,7 @@
 
 Tauri v2 desktop app for reading local books (EPUB/TXT/PDF) and web-sourced novels via Legado-compatible book source rule engine.
 
-**Status**: Beta-ready — 65/72 plan items (90%), 52 Rust + 9 E2E tests, CI cross-platform builds.
+**Status**: Beta-ready — current verified baseline: 63 Rust tests (7 ignored), 12 Vitest tests, 4 Playwright smoke tests, CI cross-platform builds.
 
 ## Quick Start
 
@@ -90,16 +90,17 @@ pnpm dev              # Vite dev server (port 1420)
 pnpm build            # tsc + vite build
 pnpm lint             # ESLint
 pnpm format           # Prettier
+pnpm test             # Vitest frontend unit tests
 pnpm tauri dev        # Full Tauri app with hot reload
 pnpm tauri build      # Production build (exe + msi + nsis)
-pnpm test:e2e         # Playwright E2E smoke tests (9 cases)
+pnpm test:e2e         # Playwright route smoke tests (4 cases)
 ```
 
 In `src-tauri/`:
 
 ```bash
 cargo check           # Type check
-cargo test            # 52 pass, 7 ignored (edge cases)
+cargo test            # 63 pass, 7 ignored
 cargo clippy -- -D warnings
 cargo fmt --check
 ```

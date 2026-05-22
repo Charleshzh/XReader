@@ -2,7 +2,7 @@
 
 Tauri v2 + React 19 + TypeScript desktop app for reading local books (EPUB/TXT/PDF) and web-sourced novels via Legado-compatible book source rule engine.
 
-**Status**: Beta-ready. 65/72 plan items (90%), 52 Rust tests + 9 E2E, CI cross-platform builds.
+**Status**: Beta-ready. Current verified baseline: 63 Rust tests (7 ignored), 12 Vitest tests, 4 Playwright smoke tests, CI cross-platform builds.
 
 ## Tech Stack
 
@@ -43,12 +43,14 @@ pnpm dev              # Vite dev server (port 1420)
 pnpm build            # tsc + vite build
 pnpm lint             # ESLint
 pnpm format           # Prettier
+pnpm test             # Vitest frontend unit tests
 pnpm tauri dev        # Full Tauri app with hot reload
 pnpm tauri build      # Production build (exe + msi + nsis)
+pnpm test:e2e         # Playwright route smoke tests (4 cases)
 
 # Rust (in src-tauri/)
 cargo check           # Type check
-cargo test            # 39 pass, 8 ignored (edge cases)
+cargo test            # 63 pass, 7 ignored
 cargo clippy -- -D warnings
 cargo fmt --check
 ```
@@ -142,7 +144,7 @@ Legado JSON → compile_source() → CompiledSource
               CssEval | XpathEval | JsonEval | RegexEval | JsEval | TmplEval
 ```
 
-39 tests pass, 8 ignored (JSON/JS edge cases). Supports all Legado rule types except `webJs` and `loginUi` (deferred).
+Current verified baseline: 63 Rust tests pass with 7 ignored; source-engine support still excludes `webJs` and `loginUi`.
 
 ## Conventions
 
@@ -164,8 +166,8 @@ Legado JSON → compile_source() → CompiledSource
 - Source management: import/delete, online search, discover page
 - Cloud sync: WebDAV bidirectional, timestamp-based, ChaCha20-Poly1305 encrypted creds
 - Security: SSRF/JS-sandbox/path-traversal/resource-limit hardening
-- CI: check/test/clippy/fmt + Playwright E2E + cross-platform builds (.msi/.dmg/.AppImage)
-- 28 IPC commands, 52 Rust tests (0 fail) + 9 E2E smoke cases
+- CI: check/test/clippy/fmt + Vitest frontend unit tests + blocking Playwright smoke + cross-platform builds (.msi/.dmg/.AppImage)
+- 28 IPC commands, 63 Rust tests (7 ignored) + 12 Vitest tests + 4 Playwright smoke cases
 - User manual: docs/USAGE.md
 
 **Future**: Phase 8 (TTS/MOBI/dictionary/mobile) — optional post-MVP

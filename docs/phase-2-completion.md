@@ -4,6 +4,8 @@
 **分支**: `main` (commit `c9e057d`)  
 **状态**: ✅ 全部 8 项任务完成
 
+> Historical snapshot: this document records the project state when Phase 2 was completed. For the current verified status, see `README.md`.
+
 ---
 
 ## 1. 交付清单

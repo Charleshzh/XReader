@@ -4,6 +4,8 @@
 **分支**: `main` (commit `364b578`)  
 **状态**: ✅ 全部 10 项任务完成
 
+> Historical snapshot: this document records the project state when Phase 3 was completed. For the current verified status, see `README.md`.
+
 ---
 
 ## 1. 交付清单
