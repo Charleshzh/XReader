@@ -13,13 +13,13 @@ function App() {
     <BrowserRouter>
       <ErrorBoundary>
         <Routes>
-        <Route path="/" element={<BookshelfPage />} />
-        <Route path="/reader/:bookId" element={<ReaderPage />} />
-        <Route path="/stats" element={<StatsPage />} />
-        <Route path="/sources" element={<SourceManagePage />} />
-        <Route path="/search" element={<SearchPage />} />
-        <Route path="/settings" element={<SettingsPage />} />
-      </Routes>
+          <Route path="/" element={<BookshelfPage />} />
+          <Route path="/reader/:bookId" element={<ReaderPage />} />
+          <Route path="/stats" element={<StatsPage />} />
+          <Route path="/sources" element={<SourceManagePage />} />
+          <Route path="/search" element={<SearchPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
+        </Routes>
       </ErrorBoundary>
     </BrowserRouter>
   );

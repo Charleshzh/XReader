@@ -322,6 +322,10 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
 function prefetchChapter(bookId: string, chapterIndex: number) {
   if (chapterIndex < 0) return;
   invoke<string>("get_chapter_content", { bookId, chapterIndex })
-    .then(() => { /* cached by Rust/Tauri */ })
-    .catch(() => { /* best-effort */ });
+    .then(() => {
+      /* cached by Rust/Tauri */
+    })
+    .catch(() => {
+      /* best-effort */
+    });
 }
