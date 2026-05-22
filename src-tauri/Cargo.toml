@@ -48,4 +48,7 @@ rquickjs = "0.11.0"
 async-trait = "0.1.89"
 base64 = "0.22.1"
 chrono = "0.4.44"
+env_logger = "0.11.10"
+log = "0.4.29"
+tauri-plugin-updater = "2.10.1"
 

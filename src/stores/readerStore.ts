@@ -147,6 +147,13 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
       });
       set({ content, loading: false });
       get().loadAnnotations();
+
+      // Prefetch adjacent chapters
+      const currentBook = get().book;
+      if (currentBook) {
+        prefetchChapter(currentBook.id, index + 1);
+        prefetchChapter(currentBook.id, index - 1);
+      }
     } catch (err) {
       console.error("Failed to load chapter:", err);
       set({ loading: false });
@@ -307,4 +314,14 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
   getStats: async (days) => {
     return await invoke<StatsSummary>("get_reading_stats", { days });
   },
+
+  // (prefetchChapter is a module-level helper, not in the store)
 }));
+
+/** Prefetch a chapter in the background (fire-and-forget). */
+function prefetchChapter(bookId: string, chapterIndex: number) {
+  if (chapterIndex < 0) return;
+  invoke<string>("get_chapter_content", { bookId, chapterIndex })
+    .then(() => { /* cached by Rust/Tauri */ })
+    .catch(() => { /* best-effort */ });
+}

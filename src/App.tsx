@@ -6,11 +6,13 @@ import { SourceManagePage } from "@/pages/SourceManagePage";
 import { SearchPage } from "@/pages/SearchPage";
 import { SettingsPage } from "@/pages/SettingsPage";
 import "./globals.css";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 function App() {
   return (
     <BrowserRouter>
-      <Routes>
+      <ErrorBoundary>
+        <Routes>
         <Route path="/" element={<BookshelfPage />} />
         <Route path="/reader/:bookId" element={<ReaderPage />} />
         <Route path="/stats" element={<StatsPage />} />
@@ -18,6 +20,7 @@ function App() {
         <Route path="/search" element={<SearchPage />} />
         <Route path="/settings" element={<SettingsPage />} />
       </Routes>
+      </ErrorBoundary>
     </BrowserRouter>
   );
 }
