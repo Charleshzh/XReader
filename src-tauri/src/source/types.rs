@@ -12,7 +12,7 @@ pub struct RuleSegment {
 }
 
 /// A compiled rule = a chain of segments with an optional extraction attribute.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct CompiledRule {
     /// Segments in order, joined by @
     pub segments: Vec<RuleSegment>,

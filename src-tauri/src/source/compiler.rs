@@ -293,3 +293,84 @@ mod tests {
         assert!(has_page);
     }
 }
+
+/// Compile a full book source JSON into CompiledSource.
+pub fn compile_source(json: &serde_json::Value) -> Result<CompiledSource, String> {
+    use crate::source::types::*;
+
+    let base_url = json["bookSourceUrl"]
+        .as_str()
+        .unwrap_or("")
+        .to_string();
+
+    let search = &json["ruleSearch"];
+    let explore = &json["ruleExplore"];
+    let book_info = &json["ruleBookInfo"];
+    let toc = &json["ruleToc"];
+    let content = &json["ruleContent"];
+
+    Ok(CompiledSource {
+        search_url: search["searchUrl"].as_str().unwrap_or("").to_string(),
+        search_book_list: compile_rule(search["bookList"].as_str().unwrap_or("")),
+        search_fields: SearchFields {
+            name: opt_compile(&search["name"]),
+            author: opt_compile(&search["author"]),
+            cover_url: opt_compile(&search["coverUrl"]),
+            intro: opt_compile(&search["intro"]),
+            kind: opt_compile(&search["kind"]),
+            word_count: opt_compile(&search["wordCount"]),
+            last_chapter: opt_compile(&search["lastChapter"]),
+            book_url: compile_rule(search["bookUrl"].as_str().unwrap_or("")).alternatives[0].clone(),
+        },
+        explore_url: explore["exploreUrl"].as_str().map(|s| s.to_string()),
+        explore_book_list: maybe_compile_rule(&explore["bookList"]),
+        explore_fields: maybe_compile_rule(&explore["bookList"]).map(|_| ExploreFields {
+            name: opt_compile(&explore["name"]),
+            author: opt_compile(&explore["author"]),
+            cover_url: opt_compile(&explore["coverUrl"]),
+            book_url: compile_rule(explore["bookUrl"].as_str().unwrap_or("")).alternatives[0].clone(),
+        }),
+        book_info_fields: BookInfoFields {
+            name: compile_rule(book_info["name"].as_str().unwrap_or("")).alternatives[0].clone(),
+            author: opt_compile(&book_info["author"]),
+            cover_url: opt_compile(&book_info["coverUrl"]),
+            intro: opt_compile(&book_info["intro"]),
+            kind: opt_compile(&book_info["kind"]),
+            word_count: opt_compile(&book_info["wordCount"]),
+            last_chapter: opt_compile(&book_info["lastChapter"]),
+            toc_url: compile_rule(book_info["tocUrl"].as_str().unwrap_or("")).alternatives[0].clone(),
+        },
+        toc_chapter_list: compile_rule(toc["chapterList"].as_str().unwrap_or("")),
+        toc_chapter_name: compile_rule(toc["chapterName"].as_str().unwrap_or("")).alternatives[0].clone(),
+        toc_chapter_url: compile_rule(toc["chapterUrl"].as_str().unwrap_or("")).alternatives[0].clone(),
+        toc_next_url: opt_compile(&toc["nextTocUrl"]),
+        content_rule: compile_rule(content["content"].as_str().unwrap_or("")).alternatives[0].clone(),
+        content_next_url: opt_compile(&content["nextContentUrl"]),
+        content_replace_regex: parse_replace_regex(&content["replaceRegex"]),
+        header: Some(json["header"].clone()),
+        base_url,
+    })
+}
+
+fn opt_compile(val: &serde_json::Value) -> Option<CompiledRule> {
+    val.as_str().filter(|s| !s.is_empty()).map(|s| {
+        compile_rule(s).alternatives.into_iter().next().unwrap_or_default()
+    })
+}
+
+fn maybe_compile_rule(val: &serde_json::Value) -> Option<RuleAlternatives> {
+    val.as_str().filter(|s| !s.is_empty()).map(|s| compile_rule(s))
+}
+
+fn parse_replace_regex(val: &serde_json::Value) -> Vec<ReplaceRule> {
+    let mut rules = Vec::new();
+    if let Some(arr) = val.as_array() {
+        for item in arr {
+            rules.push(ReplaceRule {
+                regex: item["regex"].as_str().unwrap_or("").to_string(),
+                replacement: item["replacement"].as_str().unwrap_or("").to_string(),
+            });
+        }
+    }
+    rules
+}
