@@ -5,6 +5,7 @@ export interface BookItem {
   author: string;
   cover_path: string;
   format: "epub" | "txt" | "pdf";
+  file_path: string;
   total_chapters: number;
   updated_at: number;
 }

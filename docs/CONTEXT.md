@@ -1,0 +1,105 @@
+# XReader Domain Model & Terminology
+
+## Core Concepts
+
+### Book (书籍)
+A reading item in the user's library. Has a format (EPUB/TXT/PDF), source type (local/remote), and metadata (title, author, cover).
+
+- **Local book** (`source_type: "local"`): Imported from filesystem. File at `file_path`, parsed by BookFormat trait impl.
+- **Remote book** (`source_type: "remote"`): Discovered via book source. Stored by `source_id` + `source_url`.
+
+### Chapter (章节)
+A discrete reading unit within a book. Local books: parsed from file structure (EPUB spine, TXT regex splits). Remote books: crawled from website, cached at `content_path`. Key fields: `index_num` (ordering), `fetched` (cached flag).
+
+### Bookshelf (书架)
+The library view. Grid or list layout. Supports search by title/author, import via file dialog, delete with cascade.
+
+### Reader (阅读器)
+The reading view. Renders chapter content as HTML. Modes: paginated (left/right swipe) or scroll. Configurable: font size, line height, margins, theme (6 presets: white/cream/gray/black/eye-green/custom).
+
+### Reading Progress (阅读进度)
+Tracks `(book_id, chapter_index, position)` where `position ∈ [0.0, 1.0]` is fraction within chapter. Updated on page turn or scroll position change. Auto-restored on reopen.
+
+### Bookmark (书签)
+A named saved position: `(book_id, chapter_index, position, label)`. Jump-to functionality.
+
+### Annotation (笔记/高亮)
+A text selection with optional note: `(book_id, chapter_index, start_position, end_position, text, note, color)`. Color preset: yellow/green/blue/pink/orange/purple.
+
+### Reading Stats (阅读统计)
+Per-book daily aggregates: `read_seconds` (session timer), `read_words` (estimated from position deltas). Supports daily reading goals.
+
+## Book Source Engine (书源规则引擎)
+
+### Book Source (书源)
+A JSON rule definition (Legado-compatible format) describing how to scrape a novel website. Contains 5 rule groups: `ruleSearch`, `ruleExplore`, `ruleBookInfo`, `ruleToc`, `ruleContent`.
+
+### Rule String (规则字符串)
+A Legado DSL expression using `@` as separator, `.` as selector chain. Structure: `segment1@segment2@...@extract_attribute`. Segments: `type.value.index` (index 0-based, optional).
+
+### Rule Segment Types
+| Type | Syntax | Meaning |
+|------|--------|---------|
+| `class` | `class.title.0` | Match by CSS class, index=Nth match |
+| `id` | `id.content` | Match by element id |
+| `tag` | `tag.a.1` | Match by tag name |
+| `text` | `text.下一章` | Match by text content |
+| `children` | `children` | All direct children |
+| `css` | `css.div.content>p` | Standard CSS selector |
+| `xpath` | `xpath.//div[@class='content']` | W3C XPath 1.0 |
+| `js` | `js.document.querySelector(...)` | JavaScript expression |
+| `regex` | `regex.第(\\d+)章.0` | Regex match |
+| `json` | `json.$.data.books[*]` | JSONPath |
+
+### Extract Attributes
+`text`, `textNodes`, `ownText`, `href`, `src`, `html`, `all`. Specified after final `@`.
+
+### Operators
+- `||`: fallback — try left rule, if empty try right
+- `##`: comment separator
+- `{{ }}`: URL template variable (`{{key}}`, `{{page}}`)
+- `{$. }`: cross-step JSONPath variable (`{$.tocUrl}`)
+
+### Engine Pipeline (4 stages)
+1. **Tokenizer**: splits rule string by `@`, `||`, `##` → token stream
+2. **Compiler**: parses tokens → Rule AST (`Vec<RuleSegment>`), cached per source
+3. **Evaluator**: 6 evaluators (Css/Xpath/Json/Regex/Js/Template) execute against HTML/JSON input
+4. **Pipeline**: orchestrates HTTP → evaluate → extract for 4 operations:
+   - **Search**: searchUrl → bookList → Vec\<SearchResult\>
+   - **BookInfo**: detail page → name/author/cover/intro/tocUrl → BookInfo
+   - **ChapterList**: toc page → chapterList → Vec\<Chapter\>
+   - **ChapterContent**: chapter page → content + replaceRegex → cleaned HTML
+
+### Content Cleaning (正文清洗)
+`replaceRegex` array in `ruleContent`: regex replacement pairs applied to extracted chapter HTML. Used to strip ads, navigation, site boilerplate.
+
+### Chapter Caching
+Remote chapter content cached to disk. Preload: current chapter ± 2 adjacent. TTL: 24 hours. Manual refresh supported.
+
+## Sync (同步)
+
+### WebDAV Sync
+User provides WebDAV endpoint (e.g. Nutstore/Nextcloud). Sync scope: books metadata, reading progress, bookmarks, annotations, book sources. Strategy: timestamp-based incremental, conflict = latest wins.
+
+### SyncBackend trait
+```rust
+pub trait SyncBackend: Send + Sync {
+    async fn upload(&self, key: &str, data: &[u8]) -> Result<()>;
+    async fn download(&self, key: &str) -> Result<Vec<u8>>;
+    async fn list(&self, prefix: &str) -> Result<Vec<SyncEntry>>;
+}
+```
+Default: WebDAV. Extensible to S3, OneDrive, custom REST.
+
+## Format Support
+
+| Format | Extension | Parser | Renderer | Status |
+|--------|-----------|--------|----------|--------|
+| EPUB | .epub | Rust `epub` crate | epub.js (frontend) | Phase 2 import done, Phase 3 render WIP |
+| TXT | .txt | Rust `encoding_rs` + regex | Custom HTML render | Phase 2 import done, Phase 3 render WIP |
+| PDF | .pdf | Rust `lopdf` (stub) | pdfjs-dist (frontend) | Phase 2 stub, Phase 3 full |
+| MOBI | .mobi, .azw3 | — | — | Phase 8 |
+| FB2 | .fb2 | — | — | Phase 8 |
+
+### BookFormat Trait (extensibility)
+All format parsers implement `BookFormat`. `FormatRegistry` maps extension → parser. Adding a format = implement trait + register; zero changes to existing code.

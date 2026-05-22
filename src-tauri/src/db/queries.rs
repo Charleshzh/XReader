@@ -126,6 +126,7 @@ pub struct BookListItem {
     pub author: String,
     pub cover_path: String,
     pub format: String,
+    pub file_path: String,
     pub total_chapters: i64,
     pub updated_at: i64,
 }
@@ -136,6 +137,7 @@ impl From<Book> for BookListItem {
             id: b.id,
             title: b.title,
             author: b.author,
+            file_path: b.file_path,
             cover_path: b.cover_path,
             format: b.format,
             total_chapters: b.total_chapters,

@@ -165,3 +165,61 @@ pub fn get_chapter_content(
         .read_chapter(&path, chapter)
         .map_err(|e| format!("Failed to read chapter: {}", e))
 }
+
+#[derive(serde::Serialize)]
+pub struct ChapterItem {
+    pub index: usize,
+    pub title: String,
+}
+
+#[tauri::command]
+pub fn get_chapters(
+    state: State<AppState>,
+    book_id: String,
+) -> Result<Vec<ChapterItem>, String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    let book = db::queries::get_book(&db, &book_id)
+        .map_err(|e| e.to_string())?
+        .ok_or_else(|| "Book not found".to_string())?;
+
+    let path = PathBuf::from(&book.file_path);
+    let registry = book::create_registry();
+    let format = registry
+        .find_for(&path)
+        .ok_or_else(|| "Unsupported format".to_string())?;
+
+    let chapters = format
+        .get_chapters(&path)
+        .map_err(|e| format!("Failed to load chapters: {}", e))?;
+
+    Ok(chapters
+        .into_iter()
+        .map(|c| ChapterItem {
+            index: c.index,
+            title: c.title,
+        })
+        .collect())
+}
+
+#[tauri::command]
+pub fn save_progress(
+    state: State<AppState>,
+    book_id: String,
+    chapter_index: i64,
+    position: f64,
+) -> Result<(), String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs() as i64;
+
+    db.execute(
+        "INSERT INTO reading_progress (book_id, chapter_index, position, updated_at)
+         VALUES (?1, ?2, ?3, ?4)
+         ON CONFLICT(book_id) DO UPDATE SET chapter_index = ?2, position = ?3, updated_at = ?4",
+        rusqlite::params![book_id, chapter_index, position, now],
+    )
+    .map_err(|e| e.to_string())?;
+    Ok(())
+}

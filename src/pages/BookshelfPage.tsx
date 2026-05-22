@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useBookStore } from "@/stores/bookStore";
 import { BookCard } from "@/components/bookshelf/BookCard";
@@ -12,6 +13,8 @@ export function BookshelfPage() {
   const [showImport, setShowImport] = useState(false);
   const [search, setSearch] = useState("");
 
+  const navigate = useNavigate();
+
   useEffect(() => {
     loadBooks();
   }, []);
@@ -23,8 +26,7 @@ export function BookshelfPage() {
   );
 
   const handleOpen = (book: BookItem) => {
-    // TODO: navigate to reader in Phase 3
-    console.log("Open book:", book.title);
+    navigate(`/reader/${book.id}`);
   };
 
   return (
