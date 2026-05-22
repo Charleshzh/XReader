@@ -144,3 +144,15 @@ Chapter prefetch: `loadChapter` triggers background fetch of +/-1 adjacent chapt
 Bookmarks and annotations can be exported to Markdown files. Uses Tauri `save` dialog to pick output path, then `write_file` Rust command. Bookmark export: chapter title + label per entry. Annotation export: chapter title + quoted text + user note.
 
 All format parsers implement `BookFormat`. `FormatRegistry` maps extension → parser. Adding a format = implement trait + register; zero changes to existing code.
+
+### Credential Encryption
+
+Sync credentials (WebDAV URL/username/password) are encrypted before storage in SQLite using ChaCha20-Poly1305. Encryption key derived from machine hostname and username via HMAC-SHA256 (`sync/crypto.rs`). Graceful fallback for legacy plaintext.
+
+### Text Highlighting
+
+Annotations are visually rendered in `HtmlContentView` via `<mark>` elements with color-coded backgrounds (5 colors). The highlight engine maps annotation text to character positions in the HTML content and injects wrap tags. Powered by `useMemo` for performance.
+
+### E2E Testing
+
+Playwright + Chromium. 9 smoke tests: bookshelf empty/import dialog, stats page, source manage, discover page, settings, reader error state. CI job runs on Linux. `pnpm test:e2e`.

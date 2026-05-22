@@ -2,7 +2,7 @@
 
 Tauri v2 + React 19 + TypeScript desktop app for reading local books (EPUB/TXT/PDF) and web-sourced novels via Legado-compatible book source rule engine.
 
-**Status**: Phase 7 complete. All MVP phases delivered.
+**Status**: Beta-ready. 65/72 plan items (90%), 52 Rust tests + 9 E2E, CI cross-platform builds.
 
 ## Tech Stack
 
@@ -31,6 +31,7 @@ Tauri v2 + React 19 + TypeScript desktop app for reading local books (EPUB/TXT/P
 | HTTP        | reqwest + cookie_store    | 0.13 / 0.22    |
 | Charts      | recharts (frontend)       | 3.8            |
 | Sync        | async-trait + chrono      | 0.1 / 0.4      |
+| Crypto      | ring + base64 + hostname  | 0.17 / 0.22    |
 | Logging     | env_logger + log          | 0.11 / 0.4     |
 | Updater     | tauri-plugin-updater      | 2.10           |
 | Package     | pnpm                      | 11.2.2         |
@@ -81,12 +82,14 @@ xreader/
 │   │   │   ├── http.rs           # reqwest client + encoding detection
 │   │   │   ├── evaluator/        # 6 evaluators (css/xpath/json/regex/js/template)
 │   │   │   └── pipeline/         # 5 pipelines (search/explore/book_info/chapter_list/content)
-│   │   └── sync/                 # Phase 6: WebDAV sync (types/webdav/mod)
+│   │   └── sync/                 # Phase 6: WebDAV sync (types/webdav/mod/crypto)
 │   ├── Cargo.toml
 │   └── tauri.conf.json
-├── docs/                         # phase-1 through phase-6 completion reports
-├── .github/workflows/ci.yml      # CI: cargo check/test/clippy/fmt + tsc/eslint/prettier
-└── package.json / tailwind.config.js / eslint.config.js / ...
+├── tests/                        # Test suite
+│   └── e2e/                      # Playwright E2E smoke tests (9 cases)
+├── docs/                         # phase completion reports + USAGE.md
+├── .github/workflows/ci.yml      # CI: check/test/clippy/fmt + E2E + cross-platform builds (.msi/.dmg/.AppImage)
+└── package.json / tailwind.config.js / eslint.config.js / playwright.config.ts / ...
 ```
 
 ## IPC Commands (28 total)
@@ -152,15 +155,17 @@ Legado JSON → compile_source() → CompiledSource
 
 ## Current State & Next Steps
 
-**Done (Phase 1–7 — MVP Complete)**:
+**Done (Beta-ready)**:
 
 - Bookshelf + import (EPUB/TXT/PDF) with virtual list (@tanstack/react-virtual)
-- Reader core (HTML + pdf.js, chapter TOC, sliders, fonts, click-zone page turns)
+- Reader core (HTML + pdf.js, sliders, fonts, click-zone page turns, annotation highlighting)
 - Bookmarks + annotations + reading stats with charts + Markdown export
 - Legado rule engine: Tokenizer, 6 evaluators, 5 pipelines (incl. explore/discover)
 - Source management: import/delete, online search, discover page
-- Cloud sync: WebDAV bidirectional timestamp-based sync, SyncBackend trait
-- Polish: chapter prefetch, ErrorBoundary, env_logger, auto-updater plugin
-- 28 IPC commands, CI passing
+- Cloud sync: WebDAV bidirectional, timestamp-based, ChaCha20-Poly1305 encrypted creds
+- Security: SSRF/JS-sandbox/path-traversal/resource-limit hardening
+- CI: check/test/clippy/fmt + Playwright E2E + cross-platform builds (.msi/.dmg/.AppImage)
+- 28 IPC commands, 52 Rust tests (0 fail) + 9 E2E smoke cases
+- User manual: docs/USAGE.md
 
 **Future**: Phase 8 (TTS/MOBI/dictionary/mobile) — optional post-MVP

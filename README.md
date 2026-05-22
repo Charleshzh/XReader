@@ -2,7 +2,7 @@
 
 Tauri v2 desktop app for reading local books (EPUB/TXT/PDF) and web-sourced novels via Legado-compatible book source rule engine.
 
-**Status**: Phase 7 complete — MVP delivered with all high-priority gaps closed (87% plan completion).
+**Status**: Beta-ready — 65/72 plan items (90%), 52 Rust + 9 E2E tests, CI cross-platform builds.
 
 ## Quick Start
 
@@ -25,6 +25,7 @@ pnpm tauri dev
 - Settings panel: font size slider (10-32px), line height slider (1.0-3.0x), font family (system/serif/sans-serif/KaiTi/monospace), theme (light/dark/sepia), scroll/page mode
 - Reading progress auto-save and restore; all reader settings persisted
 - Keyboard navigation (Arrow keys) + click-zone page turns (left/right 30%)
+- Annotation text highlighting in five colors (yellow/green/blue/pink/orange)
 
 ### Bookmarks & Annotations
 
@@ -91,13 +92,14 @@ pnpm lint             # ESLint
 pnpm format           # Prettier
 pnpm tauri dev        # Full Tauri app with hot reload
 pnpm tauri build      # Production build (exe + msi + nsis)
+pnpm test:e2e         # Playwright E2E smoke tests (9 cases)
 ```
 
 In `src-tauri/`:
 
 ```bash
 cargo check           # Type check
-cargo test            # 39 pass, 8 ignored (edge cases)
+cargo test            # 52 pass, 7 ignored (edge cases)
 cargo clippy -- -D warnings
 cargo fmt --check
 ```
