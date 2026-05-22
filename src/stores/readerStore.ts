@@ -115,9 +115,11 @@ function resolveActiveStyle(settingsState: ReaderSettingsState): ReaderStylePres
 }
 
 function persistSettingsState(settingsState: ReaderSettingsState) {
-  void invoke("save_reader_settings", {
-    settingsJson: JSON.stringify(settingsState),
-  }).catch(() => {});
+  void Promise.resolve(
+    invoke("save_reader_settings", {
+      settingsJson: JSON.stringify(settingsState),
+    }),
+  ).catch(() => {});
 }
 
 function setPersistedSettingsState(

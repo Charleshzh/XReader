@@ -8,6 +8,7 @@ interface HtmlContentViewProps {
 
 export function HtmlContentView({ content }: HtmlContentViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const articleRef = useRef<HTMLElement>(null);
   const {
     settingsState,
     activeStyle,
@@ -32,8 +33,17 @@ export function HtmlContentView({ content }: HtmlContentViewProps) {
     [content, chapterAnnotations],
   );
 
-  const { fontSize, lineHeight, marginH, marginV, fontFamily, fontWeight, letterSpacing } =
-    activeStyle;
+  const {
+    fontSize,
+    lineHeight,
+    marginH,
+    marginV,
+    fontFamily,
+    fontWeight,
+    letterSpacing,
+    paragraphSpacing,
+    paragraphIndent,
+  } = activeStyle;
   const scrollMode = settingsState.interaction.scrollMode;
 
   const handleScroll = useCallback(() => {
@@ -44,6 +54,16 @@ export function HtmlContentView({ content }: HtmlContentViewProps) {
     const position = scrollHeight > 0 ? scrollTop / scrollHeight : 0;
     void saveProgress(currentChapter, position);
   }, [currentChapter, saveProgress]);
+
+  useEffect(() => {
+    const article = articleRef.current;
+    if (!article) return;
+    const paragraphs = article.querySelectorAll("p");
+    paragraphs.forEach((paragraph, index) => {
+      paragraph.style.textIndent = `${paragraphIndent}em`;
+      paragraph.style.marginBottom = index === paragraphs.length - 1 ? "0px" : `${paragraphSpacing}px`;
+    });
+  }, [highlightedContent, paragraphIndent, paragraphSpacing]);
 
   useEffect(() => {
     const element = containerRef.current;
@@ -100,6 +120,7 @@ export function HtmlContentView({ content }: HtmlContentViewProps) {
       onClick={handleContentClick}
     >
       <article
+        ref={articleRef}
         className="mx-auto min-h-full max-w-3xl px-[var(--margin-h)] py-[var(--margin-v)]"
         style={
           {

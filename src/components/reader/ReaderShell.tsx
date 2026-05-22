@@ -1,5 +1,6 @@
 import { type ReactNode, useCallback, useEffect, useRef } from "react";
 import { useReaderStore } from "@/stores/readerStore";
+import type { ChromeItem, ReaderChromeRow } from "@/types/reader";
 import { Button } from "@/components/ui/button";
 import {
   ArrowLeft,
@@ -81,15 +82,57 @@ export function ReaderShell({ title, chapterTitle, onBack, children }: ReaderShe
     onBack();
   };
 
+  const renderChromeItem = useCallback(
+    (item: ChromeItem) => {
+      switch (item) {
+        case "book":
+          return title;
+        case "chapter":
+          return chapterTitle || `第 ${currentChapter + 1} 章`;
+        case "clock":
+          return new Date().toLocaleTimeString("zh-CN", {
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+        case "progress":
+          return `${currentChapter + 1}/${chapters.length}`;
+        default:
+          return "";
+      }
+    },
+    [chapterTitle, chapters.length, currentChapter, title],
+  );
+
+  const hasChromeContent = (row: ReaderChromeRow) =>
+    row.left !== "none" || row.center !== "none" || row.right !== "none";
+
+  const renderChromeRow = (row: ReaderChromeRow, dividerClass: string) => (
+    <div
+      className={`grid grid-cols-3 gap-2 px-4 py-1 text-[10px] text-muted-foreground ${row.showDivider ? dividerClass : ""}`}
+    >
+      <span className="truncate text-left">{renderChromeItem(row.left)}</span>
+      <span className="truncate text-center">{renderChromeItem(row.center)}</span>
+      <span className="truncate text-right">{renderChromeItem(row.right)}</span>
+    </div>
+  );
+
+  const showToolbarTitle = activeStyle.titleMode !== "hidden";
+
   return (
     <div className={`flex h-full flex-col ${themeClass}`}>
       <header className="flex h-12 shrink-0 items-center justify-between border-b border-border/50 px-3">
         <Button variant="ghost" size="icon" onClick={handleBack}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <div className="flex-1 truncate px-3 text-center text-sm">
-          <span className="font-medium">{title}</span>
-          {chapterTitle && <span className="ml-2 text-muted-foreground">· {chapterTitle}</span>}
+        <div className="flex-1 truncate px-3 text-center text-sm" style={{ fontSize: activeStyle.titleSize }}>
+          {showToolbarTitle ? (
+            <span className="font-medium">{title}</span>
+          ) : (
+            <span className="sr-only">{title}</span>
+          )}
+          {showToolbarTitle && chapterTitle ? (
+            <span className="ml-2 text-muted-foreground">· {chapterTitle}</span>
+          ) : null}
         </div>
         <div className="flex items-center gap-1">
           <Button variant="ghost" size="icon" onClick={toggleToc}>
@@ -107,25 +150,34 @@ export function ReaderShell({ title, chapterTitle, onBack, children }: ReaderShe
         </div>
       </header>
 
+      {hasChromeContent(activeStyle.header)
+        ? renderChromeRow(activeStyle.header, "border-b border-border/50")
+        : null}
+
       <main className="flex-1 overflow-hidden">{children}</main>
 
-      <footer className="flex h-10 shrink-0 items-center justify-between border-t border-border/50 px-4 text-xs text-muted-foreground">
-        <Button variant="ghost" size="sm" onClick={prevChapter} disabled={currentChapter === 0}>
-          <ChevronLeft className="mr-1 h-3 w-3" />
-          上一章
-        </Button>
-        <span>
-          {currentChapter + 1} / {chapters.length}
-        </span>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={nextChapter}
-          disabled={currentChapter >= chapters.length - 1}
-        >
-          下一章
-          <ChevronRight className="ml-1 h-3 w-3" />
-        </Button>
+      <footer className="shrink-0 border-t border-border/50">
+        {hasChromeContent(activeStyle.footer)
+          ? renderChromeRow(activeStyle.footer, "border-b border-border/50")
+          : null}
+        <div className="flex h-10 items-center justify-between px-4 text-xs text-muted-foreground">
+          <Button variant="ghost" size="sm" onClick={prevChapter} disabled={currentChapter === 0}>
+            <ChevronLeft className="mr-1 h-3 w-3" />
+            上一章
+          </Button>
+          <span>
+            {currentChapter + 1} / {chapters.length}
+          </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={nextChapter}
+            disabled={currentChapter >= chapters.length - 1}
+          >
+            下一章
+            <ChevronRight className="ml-1 h-3 w-3" />
+          </Button>
+        </div>
       </footer>
     </div>
   );
