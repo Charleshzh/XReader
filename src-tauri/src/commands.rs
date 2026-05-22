@@ -328,6 +328,7 @@ pub struct AnnotationItem {
     pub updated_at: i64,
 }
 
+#[allow(clippy::too_many_arguments)]
 #[tauri::command]
 pub fn add_annotation(
     state: State<AppState>,
@@ -427,8 +428,11 @@ pub fn list_annotations(
 #[tauri::command]
 pub fn delete_annotation(state: State<AppState>, id: String) -> Result<(), String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
-    db.execute("DELETE FROM annotations WHERE id = ?1", rusqlite::params![id])
-        .map_err(|e| e.to_string())?;
+    db.execute(
+        "DELETE FROM annotations WHERE id = ?1",
+        rusqlite::params![id],
+    )
+    .map_err(|e| e.to_string())?;
     Ok(())
 }
 
@@ -470,10 +474,7 @@ pub fn log_reading_session(
 }
 
 #[tauri::command]
-pub fn get_reading_stats(
-    state: State<AppState>,
-    days: i64,
-) -> Result<StatsSummary, String> {
+pub fn get_reading_stats(state: State<AppState>, days: i64) -> Result<StatsSummary, String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
 
     // Aggregate totals
