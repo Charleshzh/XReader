@@ -29,10 +29,10 @@ A text selection with optional note: `(book_id, chapter_index, start_position, e
 ### Reading Stats (阅读统计)
 Per-book daily aggregates: `read_seconds` (session timer), `read_words` (estimated from position deltas). Supports daily reading goals.
 
-## Book Source Engine (书源规则引擎)
+## Book Source Engine (书源规则引擎) — ✅ Phase 5 implemented
 
 ### Book Source (书源)
-A JSON rule definition (Legado-compatible format) describing how to scrape a novel website. Contains 5 rule groups: `ruleSearch`, `ruleExplore`, `ruleBookInfo`, `ruleToc`, `ruleContent`.
+A JSON rule definition (Legado-compatible format) describing how to scrape a novel website. Contains 5 rule groups: `ruleSearch`, `ruleExplore`, `ruleBookInfo`, `ruleToc`, `ruleContent`. Implementation: `source/tokenizer.rs` → `source/compiler.rs` → `source/evaluator/*.rs` → `source/pipeline/*.rs`.
 
 ### Rule String (规则字符串)
 A Legado DSL expression using `@` as separator, `.` as selector chain. Structure: `segment1@segment2@...@extract_attribute`. Segments: `type.value.index` (index 0-based, optional).

@@ -1,8 +1,8 @@
 # XReader — Desktop Novel Reader
 
-Tauri v2 + React 19 + TypeScript desktop app for reading local books (EPUB/TXT/PDF) and web-sourced novels. Legado-compatible book source rule engine planned for Phase 5.
+Tauri v2 + React 19 + TypeScript desktop app for reading local books (EPUB/TXT/PDF) and web-sourced novels via Legado-compatible book source rule engine.
 
-**Status**: Phase 3 complete (reader core). Entering Phase 4 (bookmarks/notes + reading stats).
+**Status**: Phase 5 complete. Entering Phase 6 (cloud sync).
 
 ## Tech Stack
 
@@ -22,219 +22,135 @@ Tauri v2 + React 19 + TypeScript desktop app for reading local books (EPUB/TXT/P
 | Encoding | encoding_rs | 0.8.35 |
 | HTML escape | html-escape | 0.2.13 |
 | Error | anyhow | 1.0 |
+| Regex | regex | 1.12 |
+| Scraper | scraper | 0.27 |
+| XPath | sxd-xpath | 0.4 |
+| JSONPath | jsonpath-rust | 1.0 |
+| JS Engine | rquickjs (QuickJS) | 0.11 |
+| HTTP | reqwest + cookie_store | 0.13 / 0.22 |
+| Charts | recharts (frontend) | 3.8 |
 | Package | pnpm | 11.2.2 |
+
+## Quick Commands
+
+```bash
+pnpm dev              # Vite dev server (port 1420)
+pnpm build            # tsc + vite build
+pnpm lint             # ESLint
+pnpm format           # Prettier
+pnpm tauri dev        # Full Tauri app with hot reload
+pnpm tauri build      # Production build (exe + msi + nsis)
+
+# Rust (in src-tauri/)
+cargo check           # Type check
+cargo test            # 39 pass, 8 ignored (edge cases)
+cargo clippy -- -D warnings
+cargo fmt --check
+```
 
 ## Project Structure
 
 ```
 xreader/
 ├── src/                          # React frontend
-│   ├── main.tsx                  # Entry: ReactDOM.createRoot
-│   ├── App.tsx                   # BrowserRouter → / (bookshelf) + /reader/:bookId
-│   ├── globals.css               # Tailwind directives + shadcn CSS vars (light/dark/sepia)
-│   ├── lib/utils.ts              # cn() helper (clsx + tailwind-merge)
-│   ├── types/
-│   │   ├── book.ts               # BookItem, ImportResult, ViewMode
-│   │   └── reader.ts             # ReaderSettings, ChapterInfo, DEFAULT_SETTINGS
-│   ├── stores/
-│   │   ├── bookStore.ts          # Zustand: books CRUD, viewMode, loadBooks/importBook/deleteBook
-│   │   └── readerStore.ts        # Zustand: openBook, loadChapter, saveProgress, updateSettings, toggleTOC/Settings
+│   ├── main.tsx                  # Entry
+│   ├── App.tsx                   # Router: / /reader/:id /stats /sources /search
+│   ├── globals.css               # Tailwind + shadcn CSS vars
+│   ├── lib/utils.ts              # cn() helper
+│   ├── types/                    # book.ts, reader.ts
+│   ├── stores/                   # bookStore, readerStore, sourceStore
 │   ├── components/
-│   │   ├── ui/
-│   │   │   └── button.tsx        # shadcn Button (cva variants: default/destructive/outline/secondary/ghost/link)
-│   │   ├── bookshelf/
-│   │   │   ├── BookCard.tsx      # Grid card: cover (asset protocol), title, author, format badge, hover-delete
-│   │   │   └── ImportDialog.tsx  # Modal: file picker (dialog plugin), multi-select, progress feedback
-│   │   └── reader/
-│   │       ├── ReaderShell.tsx    # TopBar (back+title+TOC/Settings) + BottomBar (prev/next chapter, progress)
-│   │       ├── HtmlContentView.tsx # EPUB/TXT: dangerouslySetInnerHTML, scroll/paginated, debounced progress save
-│   │       ├── PdfContentView.tsx  # PDF: pdfjs-dist canvas rendering, zoom (0.5-3x), page nav
-│   │       ├── ChapterTOC.tsx     # Left sidebar: chapter list, click-to-jump, current highlight
-│   │       └── ReaderSettings.tsx # Right sidebar: font (7 sizes), line-height (6), theme (light/dark/sepia), mode (scroll/page)
-│   └── pages/
-│       ├── BookshelfPage.tsx     # Main bookshelf: grid/list toggle, search filter, import, empty state
-│       └── ReaderPage.tsx        # /reader/:bookId → format routing → HtmlContentView | PdfContentView
+│   │   ├── ui/button.tsx          # shadcn Button
+│   │   ├── bookshelf/            # BookCard, ImportDialog
+│   │   └── reader/               # ReaderShell, HtmlContentView, PdfContentView,
+│   │                               ChapterTOC, ReaderSettings, BookmarkPanel, AnnotationPanel
+│   └── pages/                    # BookshelfPage, ReaderPage, StatsPage,
+│                                   SearchPage, SourceManagePage
 ├── src-tauri/                    # Rust backend
 │   ├── src/
-│   │   ├── main.rs               # Windows subsystem entry
-│   │   ├── lib.rs                # AppState (Mutex<Connection>), plugin registration, command handler list
-│   │   ├── commands.rs           # 6 IPC commands (see Commands section below)
-│   │   ├── book/
-│   │   │   ├── mod.rs            # create_registry(): registers EpubFormat + TxtFormat + PdfFormat
-│   │   │   ├── format.rs         # BookFormat trait + BookMeta + Chapter + FormatRegistry
-│   │   │   ├── epub.rs           # EPUB: metadata (mdata.value), cover (get_cover), spine→chapters, HTML content
-│   │   │   ├── txt.rs            # TXT: for_bom → GBK→UTF-8 fallback, 5 regex patterns for chapter split
-│   │   │   └── pdf.rs            # PDF: filename-as-title, single chapter placeholder (rendered by pdf.js)
-│   │   ├── db/
-│   │   │   ├── mod.rs            # init(): create SQLite, WAL mode, run refinery migrations
-│   │   │   ├── models.rs         # 10 structs: Book, Chapter, ReadingProgress, Bookmark, Annotation, BookSource...
-│   │   │   ├── queries.rs        # CRUD + BookListItem (id/title/author/cover/format/file_path/chapters/updated)
-│   │   │   └── migrations/
-│   │   │       └── V1__initial_schema.sql  # 9 tables with FK constraints, ON DELETE CASCADE, UNIQUE indexes
-│   │   ├── source/               # Phase 5: rule engine (stubs)
-│   │   └── sync/                 # Phase 6: sync (stubs)
-│   ├── Cargo.toml                # Dependencies, lib name: xreader_lib
-│   └── tauri.conf.json           # Window 1200×800 min 800×600, identifier: com.xreader.desktop
-├── docs/
-│   ├── phase-1-completion.md
-│   ├── phase-2-completion.md
-│   └── phase-3-completion.md
-├── .github/workflows/ci.yml      # CI: cargo check+test+clippy+fmt, tsc+eslint+prettier
-├── package.json                  # Scripts: dev, build, lint, format, tauri
-├── eslint.config.js              # ESLint 9 flat config (tseslint + react-hooks + prettier)
-├── .prettierrc
-├── tsconfig.json                 # @/ → src/ path alias
-├── vite.config.ts                # Path alias + Tauri HMR
-├── tailwind.config.js            # shadcn color tokens
-└── postcss.config.js
+│   │   ├── main.rs / lib.rs      # Entry + AppState + 21 command registration
+│   │   ├── commands.rs           # All IPC commands
+│   │   ├── book/                 # BookFormat trait + EPUB/TXT/PDF parsers
+│   │   ├── db/                   # SQLite init, models, queries, V1 migration
+│   │   ├── source/               # Legado rule engine (Phase 5)
+│   │   │   ├── tokenizer.rs      # @/||/## splitter
+│   │   │   ├── compiler.rs       # Rule AST + compile_source()
+│   │   │   ├── types.rs          # RuleSegment, CompiledSource, etc.
+│   │   │   ├── http.rs           # reqwest client + encoding detection
+│   │   │   ├── evaluator/        # 6 evaluators (css/xpath/json/regex/js/template)
+│   │   │   └── pipeline/         # 4 pipelines (search/book_info/chapter_list/content)
+│   │   └── sync/                 # Phase 6: cloud sync (stubs)
+│   ├── Cargo.toml
+│   └── tauri.conf.json
+├── docs/                         # phase-1 through phase-5 completion reports
+├── .github/workflows/ci.yml      # CI: cargo check/test/clippy/fmt + tsc/eslint/prettier
+└── package.json / tailwind.config.js / eslint.config.js / ...
 ```
 
-## IPC Commands
+## IPC Commands (21 total)
 
-| Command | Args | Returns | Phase |
-|---------|------|---------|-------|
-| `greet` | `name: string` | `string` | 1 |
-| `get_app_version` | — | `string` | 1 |
-| `import_book` | `file_path: string` | `ImportResult` | 2 |
-| `list_books` | — | `Vec<BookListItem>` | 2 |
-| `delete_book` | `id: string` | `()` | 2 |
-| `get_chapter_content` | `book_id, chapter_index` | `string` (HTML) | 2 |
-| `get_chapters` | `book_id: string` | `Vec<{index, title}>` | 3 |
-| `save_progress` | `book_id, chapter_index, position` | `()` | 3 |
+| # | Command | Phase | Category |
+|---|---------|-------|----------|
+| 1 | `greet` | 1 | Test |
+| 2 | `get_app_version` | 1 | Meta |
+| 3 | `import_book` | 2 | Books |
+| 4 | `list_books` | 2 | Books |
+| 5 | `delete_book` | 2 | Books |
+| 6 | `get_chapter_content` | 2 | Reader |
+| 7 | `get_chapters` | 3 | Reader |
+| 8 | `save_progress` | 3 | Reader |
+| 9 | `add_bookmark` | 4 | Annotations |
+| 10 | `list_bookmarks` | 4 | Annotations |
+| 11 | `delete_bookmark` | 4 | Annotations |
+| 12 | `add_annotation` | 4 | Annotations |
+| 13 | `update_annotation_note` | 4 | Annotations |
+| 14 | `list_annotations` | 4 | Annotations |
+| 15 | `delete_annotation` | 4 | Annotations |
+| 16 | `log_reading_session` | 4 | Stats |
+| 17 | `get_reading_stats` | 4 | Stats |
+| 18 | `import_book_source` | 5 | Sources |
+| 19 | `list_book_sources` | 5 | Sources |
+| 20 | `delete_book_source` | 5 | Sources |
+| 21 | `search_books` | 5 | Sources (async) |
 
-## Reader Architecture
+## Rule Engine (Phase 5)
+
+Tokeninzer → Compiler → 6 Evaluators → 4 Pipelines.
 
 ```
-BookshelfPage ──navigate(/reader/:id)──→ ReaderPage
-                                          │
-                          ┌───────────────┴───────────────┐
-                     format ≠ "pdf"                   format = "pdf"
-                          │                               │
-                   HtmlContentView                PdfContentView
-                    (dangerouslySetInnerHTML)      (pdf.js Canvas)
-                          │                               │
-                   scroll/paginated              zoom + page nav
-
-ReaderShell wraps content with:
-  TopBar: ←Back | Title · Chapter | 📋TOC ⚙Settings
-  Content: flex-1 overflow-hidden
-  BottomBar: ◀Prev | N/M | Next▶
-
-Sidebars (fixed overlays, z-40):
-  ChapterTOC (left, w-72)  — list of chapters, click-to-jump
-  ReaderSettings (right, w-72) — font(7)/line-height(6)/theme(3)/mode(2)
+Legado JSON → compile_source() → CompiledSource
+                                   │
+                          SourcePipeline
+                    ┌──────────┼──────────┐
+                 Search   BookInfo  ChapterList  ChapterContent
+                    │         │         │           │
+                    └─────────┴─────────┴───────────┘
+                                   │
+                           RuleEvaluator
+              CssEval | XpathEval | JsonEval | RegexEval | JsEval | TmplEval
 ```
 
-## Database Schema (V1 — active)
-
-9 tables via `V1__initial_schema.sql` (refinery `embed_migrations!`):
-`books` → `chapters` → `reading_progress` → `bookmarks` → `annotations` → `book_sources` → `sync_meta` → `reading_stats` → `app_settings`
-
-Key details:
-- All primary keys are TEXT UUIDs (except `reading_stats.id` INTEGER AUTOINCREMENT, `reading_progress.book_id` as PK)
-- `chapters.book_id` FK → `books.id` ON DELETE CASCADE
-- `reading_progress` uses UPSERT (INSERT ON CONFLICT DO UPDATE)
-- WAL mode enabled at DB init
-- Created/updated timestamps are i64 Unix seconds (set by Rust, not SQLite)
+39 tests pass, 8 ignored (JSON/JS edge cases). Supports all Legado rule types except `webJs` and `loginUi` (deferred).
 
 ## Conventions
 
-### Rust
-- **Error handling**: `anyhow::Result<T>` in BookFormat trait. Tauri commands convert to `Result<T, String>` via `.map_err(|e| e.to_string())`.
-- **Book format plugin**: implement `BookFormat` trait, register in `create_registry()`. New formats are zero-modification to existing code.
-- **Allow attributes**: `#![allow(dead_code, unused_imports)]` at lib.rs — models/queries for future phases. Remove when module is fully wired.
-- **DB path**: `directories::ProjectDirs::data_dir() / "xreader.db"`.
-- **Chapters at import time**: `import_book` writes chapter rows to `chapters` table; reader queries them directly.
-
-### Frontend
-- **Component layers**: Page (route + layout) → Feature (data + state via hooks) → UI Component (pure, props only).
-- **State**: One Zustand store per domain: `bookStore`, `readerStore`.
-- **Types**: TS types in `src/types/` mirror Rust command return types.
-- **Asset protocol**: `convertFileSrc(path)` for `<img src>` and pdf.js to load local filesystem paths.
-- **Path alias**: `@/` → `src/` (tsconfig `paths` + vite `resolve.alias`).
-
-### Git
-- Branch naming: `feat/<feature>`, `fix/<bug>`, `chore/<misc>`, `docs/<docs>`.
-- Commits: [Conventional Commits](https://www.conventionalcommits.org/) — `feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `chore:`.
-- main is protected, push via PR only.
-
-## Commands
-
-```bash
-# Frontend
-pnpm dev              # Vite dev server (frontend only, port 1420)
-pnpm build            # tsc --noEmit + vite build
-pnpm lint             # eslint .
-pnpm format           # prettier --write src/**/*.{ts,tsx,css}
-pnpm tauri dev        # Full Tauri app with hot reload
-pnpm tauri build      # Production build (exe + msi + nsis)
-
-# Rust (in src-tauri/)
-cargo check           # Type check
-cargo test            # Run Rust unit tests
-cargo clippy -- -D warnings
-cargo fmt --check
-cargo fmt             # Auto-format
-```
-
-## Architecture Decisions
-
-1. **Bundled SQLite**: `rusqlite/bundled` — no system SQLite required.
-2. **refinery embedded migrations**: `embed_migrations!` inlines SQL at compile time, zero runtime dependencies.
-3. **Tailwind v3 not v4**: v4 shadcn/ui compatibility not stable as of May 2026.
-4. **ESLint 9 flat config**: ESM `eslint.config.js`, integrated with typescript-eslint + react-hooks + prettier.
-5. **TXT encoding**: `Encoding::for_bom()` → GBK fallback → UTF-8. Avoids `chardetng` compile time cost.
-6. **PDF dual approach**: Rust extracts filename-as-title; frontend pdfjs-dist renders pages on Canvas via Tauri asset protocol.
-7. **No epub.js**: Rust backend extracts chapter HTML; frontend renders directly with `dangerouslySetInnerHTML`. Avoids iframe complications and React 19 compat issues.
-8. **Chapters persisted at import**: `import_book` writes all chapters to DB; reader never re-parses the file.
-9. **CSS Custom Properties for reader styling**: `--margin-h` / `--margin-v` set inline via `style` attribute, avoid className explosion.
-10. **Debounced progress save**: 500ms debounce on scroll events before IPC `save_progress` call.
-
-## Book Format Architecture
-
-```rust
-pub trait BookFormat: Send + Sync {
-    fn format_name(&self) -> &'static str;         // "epub" | "txt" | "pdf"
-    fn extensions(&self) -> &[&str];               // ["epub"] | ["txt"]
-    fn parse(&self, path: &Path) -> anyhow::Result<BookMeta>;
-    fn extract_cover(&self, path: &Path, output_dir: &Path) -> anyhow::Result<Option<PathBuf>>;
-    fn get_chapters(&self, path: &Path) -> anyhow::Result<Vec<Chapter>>;
-    fn read_chapter(&self, path: &Path, chapter: &Chapter) -> anyhow::Result<String>;
-}
-```
-
-`FormatRegistry` maps file extensions → `Box<dyn BookFormat>`. Add new formats (MOBI, FB2, etc.) by implementing the trait and registering in `create_registry()` — zero modification to existing code.
+- **Rust**: `anyhow::Result` internal, `Result<T, String>` at Tauri boundary. `#![allow(dead_code, unused_imports)]` at lib.rs.
+- **BookFormat trait**: New formats = implement trait + register. Zero existing code modification.
+- **Frontend layers**: Page → Feature → UI Component. Zustand stores: one per domain.
+- **Asset protocol**: `convertFileSrc(path)` for local files.
+- **Git**: GitHub Flow, Conventional Commits, main protected.
 
 ## Current State & Next Steps
 
-**Done (Phase 1–3)**:
-- Tauri scaffold, React + Tailwind + shadcn/ui, ESLint + Prettier
-- SQLite with refinery migrations (9 tables)
-- Book import: EPUB (metadata/cover/chapters/content), TXT (BOM→GBK→UTF-8 + regex chapter split), PDF (filename + pdfjs render)
-- Bookshelf UI: grid/list, search filter, import dialog, format badges, cover images
-- Reader core: unified shell (top/bottom bars, keyboard nav), HTML content renderer, pdf.js Canvas renderer
-- Reader features: chapter TOC sidebar, settings panel (font/line-height/theme/mode), scroll progress auto-save
-- Tauri IPC: 8 commands covering books CRUD, chapter loading, progress persistence
-- CI: GitHub Actions — cargo check/test/clippy/fmt + tsc/eslint/prettier
+**Done (Phase 1–5)**:
+- Bookshelf + import (EPUB/TXT/PDF)
+- Reader core (HTML + pdf.js, chapter TOC, settings, themes)
+- Bookmarks + annotations + reading stats with charts
+- Legado rule engine: Tokenizer, 6 evaluators, 4 pipelines
+- Source management: import/delete, online search
+- 21 IPC commands, CI passing
 
-**Next: Phase 4 — Bookmarks/Notes + Reading Stats (30-50h)**
-- Bookmark add/manage UI (per-chapter position labels)
-- Text selection + highlight (EPUB/TXT content)
-- Note editor panel attached to highlights
-- Bookmark/note list with jump navigation, JSON/Markdown export
-- Reading timer: session duration tracking, daily/weekly/monthly aggregation
-- Word count estimation from progress deltas, daily reading goals
-- Stats dashboard with charts (recharts)
+**Next: Phase 6 — Cloud Sync (20-40h)**
+- WebDAV client, SyncBackend trait, incremental sync, conflict resolution
 
-**Future Phases**:
-- Phase 5: Legado-compatible book source rule engine (Tokenizer→Compiler→6 evaluators→4 pipelines)
-- Phase 6: WebDAV cloud sync
-- Phase 7: Polish, packaging, auto-update
-- Phase 8: TTS, MOBI/AZW3/FB2, dictionary, mobile
-
-## Key Constraints
-
-- Book source engine MUST be 100% Legado JSON format compatible (import/export .txt/.json).
-- No private extension fields in book source rules.
-- All book formats share the `BookFormat` trait — new formats must not modify existing code.
-- `anyhow::Result` for internal errors; Tauri command boundary converts to `String` errors.
+**Future**: Phase 7 (polish), Phase 8 (TTS/MOBI/dictionary/mobile)
