@@ -1,0 +1,51 @@
+import { create } from "zustand";
+import { invoke } from "@tauri-apps/api/core";
+import type { BookItem, ImportResult, ViewMode } from "@/types/book";
+
+interface BookState {
+  books: BookItem[];
+  loading: boolean;
+  viewMode: ViewMode;
+
+  /** Fetch books from Rust backend */
+  loadBooks: () => Promise<void>;
+
+  /** Import a book by file path */
+  importBook: (filePath: string) => Promise<ImportResult>;
+
+  /** Delete a book */
+  deleteBook: (id: string) => Promise<void>;
+
+  /** Toggle grid/list view */
+  setViewMode: (mode: ViewMode) => void;
+}
+
+export const useBookStore = create<BookState>((set, get) => ({
+  books: [],
+  loading: false,
+  viewMode: "grid",
+
+  loadBooks: async () => {
+    set({ loading: true });
+    try {
+      const books = await invoke<BookItem[]>("list_books");
+      set({ books, loading: false });
+    } catch (err) {
+      console.error("Failed to load books:", err);
+      set({ loading: false });
+    }
+  },
+
+  importBook: async (filePath: string) => {
+    const result = await invoke<ImportResult>("import_book", { filePath });
+    await get().loadBooks();
+    return result;
+  },
+
+  deleteBook: async (id: string) => {
+    await invoke("delete_book", { id });
+    await get().loadBooks();
+  },
+
+  setViewMode: (mode: ViewMode) => set({ viewMode: mode }),
+}));

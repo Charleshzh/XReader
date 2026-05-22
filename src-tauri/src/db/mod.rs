@@ -1,6 +1,6 @@
 #![allow(dead_code)]
-mod models;
-mod queries;
+pub mod models;
+pub mod queries;
 
 use rusqlite::Connection;
 use std::path::PathBuf;

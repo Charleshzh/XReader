@@ -1,6 +1,8 @@
 #![allow(dead_code)]
 #![allow(unused_imports)]
+
 mod book;
+mod commands;
 mod db;
 mod source;
 mod sync;
@@ -23,21 +25,27 @@ fn get_app_version() -> String {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    // Determine app data directory
     let app_dir = directories::ProjectDirs::from("com", "xreader", "XReader")
         .map(|d| d.data_dir().to_path_buf())
         .unwrap_or_else(|| std::path::PathBuf::from("./xreader_data"));
     let db_dir = app_dir.to_string_lossy().to_string();
 
-    // Initialize database
     let conn = db::init(&db_dir).expect("Failed to initialize database");
 
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .manage(AppState {
             db: Mutex::new(conn),
         })
-        .invoke_handler(tauri::generate_handler![greet, get_app_version])
+        .invoke_handler(tauri::generate_handler![
+            greet,
+            get_app_version,
+            commands::import_book,
+            commands::list_books,
+            commands::delete_book,
+            commands::get_chapter_content,
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
