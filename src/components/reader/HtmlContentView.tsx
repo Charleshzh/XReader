@@ -1,4 +1,6 @@
 import { useRef, useEffect, useCallback, useMemo, useState } from "react";
+import { convertChinese } from "@/lib/chinese";
+import { findContentMatches, highlightSearchMatches } from "@/lib/contentSearch";
 import { highlightAnnotations } from "@/lib/highlight";
 import { pageIndexFromFraction } from "@/lib/paginatedLayout";
 import { resolveTapZone } from "@/lib/tapZones";
@@ -21,6 +23,10 @@ export function HtmlContentView({ content }: HtmlContentViewProps) {
     currentPage,
     saveProgress,
     dispatchTapAction,
+    searchQuery,
+    searchMatches,
+    currentSearchIndex,
+    setSearchMatches,
   } = useReaderStore();
 
   const chapterAnnotations = useMemo(
@@ -31,10 +37,24 @@ export function HtmlContentView({ content }: HtmlContentViewProps) {
     [annotations, currentChapter],
   );
 
-  const highlightedContent = useMemo(
-    () => highlightAnnotations(content, chapterAnnotations),
-    [content, chapterAnnotations],
+  const convertedContent = useMemo(
+    () => convertChinese(settingsState.assist.chineseMode, content),
+    [content, settingsState.assist.chineseMode],
   );
+
+  const highlightedContent = useMemo(() => {
+    const withAnnotations = highlightAnnotations(convertedContent, chapterAnnotations);
+    return highlightSearchMatches(
+      withAnnotations,
+      searchQuery,
+      settingsState.assist.searchCaseSensitive,
+    );
+  }, [
+    chapterAnnotations,
+    convertedContent,
+    searchQuery,
+    settingsState.assist.searchCaseSensitive,
+  ]);
 
   const {
     fontSize,
@@ -59,6 +79,21 @@ export function HtmlContentView({ content }: HtmlContentViewProps) {
   }, [currentChapter, saveProgress]);
 
   useEffect(() => {
+    setSearchMatches(
+      findContentMatches(
+        convertedContent,
+        searchQuery,
+        settingsState.assist.searchCaseSensitive,
+      ),
+    );
+  }, [
+    convertedContent,
+    searchQuery,
+    setSearchMatches,
+    settingsState.assist.searchCaseSensitive,
+  ]);
+
+  useEffect(() => {
     const article = articleRef.current;
     if (!article) return;
     const paragraphs = article.querySelectorAll("p");
@@ -67,6 +102,16 @@ export function HtmlContentView({ content }: HtmlContentViewProps) {
       paragraph.style.marginBottom = index === paragraphs.length - 1 ? "0px" : `${paragraphSpacing}px`;
     });
   }, [highlightedContent, paragraphIndent, paragraphSpacing]);
+
+  useEffect(() => {
+    if (searchMatches.length === 0) return;
+    const article = articleRef.current;
+    if (!article) return;
+    const target = article.querySelector(`[data-search-index="${currentSearchIndex}"]`) as
+      | HTMLElement
+      | null;
+    target?.scrollIntoView({ block: isPaginated ? "nearest" : "center", inline: "center" });
+  }, [currentSearchIndex, highlightedContent, isPaginated, searchMatches.length]);
 
   useEffect(() => {
     const element = containerRef.current;
@@ -81,7 +126,7 @@ export function HtmlContentView({ content }: HtmlContentViewProps) {
     if (Math.abs(element.scrollTop - nextScrollTop) > 2) {
       element.scrollTop = nextScrollTop;
     }
-  }, [content, currentPosition, isPaginated]);
+  }, [convertedContent, currentPosition, isPaginated]);
 
   useEffect(() => {
     const element = containerRef.current;

@@ -2,6 +2,7 @@ import { type ReactNode, useCallback, useEffect, useRef } from "react";
 import { useReaderStore } from "@/stores/readerStore";
 import type { ChromeItem, ReaderChromeRow } from "@/types/reader";
 import { Button } from "@/components/ui/button";
+import { ReaderSearchPanel } from "@/components/reader/ReaderSearchPanel";
 import {
   ArrowLeft,
   Bookmark,
@@ -9,6 +10,7 @@ import {
   ChevronRight,
   Highlighter,
   List,
+  Search,
   Settings,
 } from "lucide-react";
 
@@ -36,6 +38,7 @@ export function ReaderShell({ title, chapterTitle, onBack, children }: ReaderShe
     toggleBookmarks,
     toggleAnnotations,
     endSession,
+    showSearchPanel,
   } = useReaderStore();
 
   const isPaginated = settingsState.interaction.scrollMode === "paginated";
@@ -162,6 +165,9 @@ export function ReaderShell({ title, chapterTitle, onBack, children }: ReaderShe
           ) : null}
         </div>
         <div className="flex items-center gap-1">
+          <Button variant="ghost" size="icon" onClick={() => useReaderStore.setState({ showSearchPanel: true })}>
+            <Search className="h-4 w-4" />
+          </Button>
           <Button variant="ghost" size="icon" onClick={toggleToc}>
             <List className="h-4 w-4" />
           </Button>
@@ -177,6 +183,7 @@ export function ReaderShell({ title, chapterTitle, onBack, children }: ReaderShe
         </div>
       </header>
 
+      {showSearchPanel ? <ReaderSearchPanel /> : null}
       {hasChromeContent(activeStyle.header)
         ? renderChromeRow(activeStyle.header, "border-b border-border/50")
         : null}

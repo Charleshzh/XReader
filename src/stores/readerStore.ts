@@ -18,6 +18,8 @@ import { migrateReaderSettings } from "@/lib/migrateReaderSettings";
 
 import { clampPageIndex, toChapterFraction } from "@/lib/paginatedLayout";
 
+import type { ContentMatch } from "@/lib/contentSearch";
+
 export interface BookmarkItem {
   id: string;
   book_id: string;
@@ -60,6 +62,9 @@ interface ReaderRuntimeState {
   tocOpen: boolean;
   settingsOpen: boolean;
   showSearchPanel: boolean;
+  searchQuery: string;
+  searchMatches: ContentMatch[];
+  currentSearchIndex: number;
   bookmarks: BookmarkItem[];
   bookmarksOpen: boolean;
   annotations: AnnotationItem[];
@@ -90,6 +95,10 @@ interface ReaderState extends ReaderRuntimeState {
   dispatchTapAction: (zone: TapZone) => Promise<void>;
   toggleToc: () => void;
   toggleSettings: () => void;
+  setSearchQuery: (query: string) => void;
+  setSearchMatches: (matches: ContentMatch[]) => void;
+  jumpToSearchMatch: (index: number) => void;
+  closeSearchPanel: () => void;
   loadSavedSettings: () => Promise<void>;
   addBookmark: (label: string) => Promise<void>;
   loadBookmarks: () => Promise<void>;
@@ -165,6 +174,9 @@ export function createInitialReaderRuntimeState(): ReaderRuntimeState {
     tocOpen: false,
     settingsOpen: false,
     showSearchPanel: false,
+    searchQuery: "",
+    searchMatches: [],
+    currentSearchIndex: 0,
     bookmarks: [],
     bookmarksOpen: false,
     annotations: [],
@@ -187,6 +199,10 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
       currentPosition: 0,
       currentPage: 0,
       totalPages: 1,
+      showSearchPanel: false,
+      searchQuery: "",
+      searchMatches: [],
+      currentSearchIndex: 0,
       bookmarks: [],
       annotations: [],
     });
@@ -222,6 +238,8 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
       currentPosition: position,
       currentPage: 0,
       totalPages: 1,
+      searchMatches: [],
+      currentSearchIndex: 0,
     });
     try {
       const content = await invoke<string>("get_chapter_content", {
@@ -430,6 +448,32 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
       annotationsOpen: false,
       showSearchPanel: false,
     })),
+
+  setSearchQuery: (query) =>
+    set({
+      searchQuery: query,
+      currentSearchIndex: 0,
+      showSearchPanel: true,
+    }),
+
+  setSearchMatches: (matches) =>
+    set((state) => ({
+      searchMatches: matches,
+      currentSearchIndex:
+        matches.length === 0
+          ? 0
+          : Math.max(0, Math.min(state.currentSearchIndex, matches.length - 1)),
+    })),
+
+  jumpToSearchMatch: (index) =>
+    set((state) => ({
+      currentSearchIndex:
+        state.searchMatches.length === 0
+          ? 0
+          : Math.max(0, Math.min(index, state.searchMatches.length - 1)),
+    })),
+
+  closeSearchPanel: () => set({ showSearchPanel: false }),
 
   loadSavedSettings: async () => {
     try {
