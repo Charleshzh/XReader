@@ -4,6 +4,7 @@ import { X, AlignJustify, Columns } from "lucide-react";
 import { StylePresetList } from "@/components/reader/StylePresetList";
 import { ReaderTypographyPanel } from "@/components/reader/ReaderTypographyPanel";
 import { ReaderChromePanel } from "@/components/reader/ReaderChromePanel";
+import { TapZoneConfigPanel } from "@/components/reader/TapZoneConfigPanel";
 
 export function ReaderSettings() {
   const { settingsState, patchInteraction, toggleSettings } = useReaderStore();
@@ -44,6 +45,7 @@ export function ReaderSettings() {
         </section>
 
         <ReaderChromePanel />
+        <TapZoneConfigPanel />
       </div>
     </div>
   );

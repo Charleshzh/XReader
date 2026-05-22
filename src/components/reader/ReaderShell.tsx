@@ -60,6 +60,18 @@ export function ReaderShell({ title, chapterTitle, onBack, children }: ReaderShe
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleKeyDown]);
 
+  useEffect(() => {
+    if (!isPaginated || settingsState.interaction.autoPageSeconds == null) {
+      return;
+    }
+
+    const timer = window.setInterval(() => {
+      void nextPage();
+    }, settingsState.interaction.autoPageSeconds * 1000);
+
+    return () => window.clearInterval(timer);
+  }, [isPaginated, nextPage, settingsState.interaction.autoPageSeconds]);
+
   const themeClass = {
     light: "bg-white text-gray-900",
     dark: "bg-gray-900 text-gray-100",

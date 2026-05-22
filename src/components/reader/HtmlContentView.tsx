@@ -1,6 +1,7 @@
 import { useRef, useEffect, useCallback, useMemo, useState } from "react";
 import { highlightAnnotations } from "@/lib/highlight";
-import { clampPageIndex, pageIndexFromFraction } from "@/lib/paginatedLayout";
+import { pageIndexFromFraction } from "@/lib/paginatedLayout";
+import { resolveTapZone } from "@/lib/tapZones";
 import { useReaderStore } from "@/stores/readerStore";
 
 interface HtmlContentViewProps {
@@ -18,11 +19,8 @@ export function HtmlContentView({ content }: HtmlContentViewProps) {
     currentChapter,
     currentPosition,
     currentPage,
-    totalPages,
     saveProgress,
-    setPageState,
-    nextPage,
-    prevPage,
+    dispatchTapAction,
   } = useReaderStore();
 
   const chapterAnnotations = useMemo(
@@ -136,17 +134,6 @@ export function HtmlContentView({ content }: HtmlContentViewProps) {
     return () => window.cancelAnimationFrame(frame);
   }, [highlightedContent, currentPosition, isPaginated, pageWidth]);
 
-  const goToPage = useCallback(
-    (page: number) => {
-      const element = containerRef.current;
-      if (!element) return;
-      const next = clampPageIndex(page, totalPages);
-      element.scrollTo({ left: next * pageWidth, behavior: "smooth" });
-      setPageState(next, totalPages);
-    },
-    [pageWidth, setPageState, totalPages],
-  );
-
   useEffect(() => {
     if (!isPaginated || pageWidth <= 0) return;
     const element = containerRef.current;
@@ -159,18 +146,16 @@ export function HtmlContentView({ content }: HtmlContentViewProps) {
 
   const handleContentClick = useCallback(
     (event: React.MouseEvent) => {
-      if (!isPaginated) return;
       const rect = event.currentTarget.getBoundingClientRect();
-      const x = event.clientX - rect.left;
-      if (x < rect.width * 0.3) {
-        void prevPage();
-      } else if (x > rect.width * 0.7) {
-        void nextPage();
-      } else {
-        goToPage(currentPage);
-      }
+      const zone = resolveTapZone({
+        x: event.clientX - rect.left,
+        y: event.clientY - rect.top,
+        width: rect.width,
+        height: rect.height,
+      });
+      void dispatchTapAction(zone);
     },
-    [currentPage, goToPage, isPaginated, nextPage, prevPage],
+    [dispatchTapAction],
   );
 
   return (

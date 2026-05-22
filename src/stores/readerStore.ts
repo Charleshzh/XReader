@@ -7,6 +7,7 @@ import type {
   InteractionSettings,
   ReaderSettingsState,
   ReaderStylePreset,
+  TapZone,
 } from "@/types/reader";
 import {
   DEFAULT_READER_SETTINGS_STATE,
@@ -58,6 +59,7 @@ interface ReaderRuntimeState {
   activeStyle: ReaderStylePreset;
   tocOpen: boolean;
   settingsOpen: boolean;
+  showSearchPanel: boolean;
   bookmarks: BookmarkItem[];
   bookmarksOpen: boolean;
   annotations: AnnotationItem[];
@@ -85,6 +87,7 @@ interface ReaderState extends ReaderRuntimeState {
   deleteStylePreset: (styleId: string) => void;
   patchInteraction: (partial: Partial<InteractionSettings>) => void;
   patchAssist: (partial: Partial<AssistSettings>) => void;
+  dispatchTapAction: (zone: TapZone) => Promise<void>;
   toggleToc: () => void;
   toggleSettings: () => void;
   loadSavedSettings: () => Promise<void>;
@@ -161,6 +164,7 @@ export function createInitialReaderRuntimeState(): ReaderRuntimeState {
     activeStyle: resolveActiveStyle(settingsState),
     tocOpen: false,
     settingsOpen: false,
+    showSearchPanel: false,
     bookmarks: [],
     bookmarksOpen: false,
     annotations: [],
@@ -380,12 +384,42 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
     });
   },
 
+  dispatchTapAction: async (zone) => {
+    const action = get().settingsState.interaction.tapZones[zone];
+    switch (action) {
+      case "menu":
+        get().toggleSettings();
+        break;
+      case "next-page":
+        await get().nextPage();
+        break;
+      case "prev-page":
+        await get().prevPage();
+        break;
+      case "next-chapter":
+        await get().nextChapter();
+        break;
+      case "prev-chapter":
+        await get().prevChapter();
+        break;
+      case "bookmark":
+        await get().addBookmark("书签");
+        break;
+      case "search":
+        set({ showSearchPanel: true });
+        break;
+      default:
+        break;
+    }
+  },
+
   toggleToc: () =>
     set((state) => ({
       tocOpen: !state.tocOpen,
       settingsOpen: false,
       bookmarksOpen: false,
       annotationsOpen: false,
+      showSearchPanel: false,
     })),
 
   toggleSettings: () =>
@@ -394,6 +428,7 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
       tocOpen: false,
       bookmarksOpen: false,
       annotationsOpen: false,
+      showSearchPanel: false,
     })),
 
   loadSavedSettings: async () => {
@@ -445,6 +480,7 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
       tocOpen: false,
       settingsOpen: false,
       annotationsOpen: false,
+      showSearchPanel: false,
     })),
 
   addAnnotation: async (text, note, color, start, end) => {
@@ -498,6 +534,7 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
       tocOpen: false,
       settingsOpen: false,
       bookmarksOpen: false,
+      showSearchPanel: false,
     })),
 
   startSession: () => {
