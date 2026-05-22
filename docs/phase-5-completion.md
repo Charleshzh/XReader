@@ -10,45 +10,45 @@
 
 ### Phase 5a: Tokenizer + RuleCompiler
 
-| # | 任务 | 状态 |
-|---|------|------|
-| 1 | 添加 Rust 依赖 (scraper/sxd/rquickjs/reqwest 等) | ✅ |
-| 2 | Tokenizer: @ / || / ## 分割器 | ✅ |
-| 3 | RuleSegment 解析: 类型.值.索引 | ✅ |
-| 4 | Compiler: 规则字符串 → CompiledRule AST | ✅ |
-| 5 | 编译缓存 (compile_source: JSON → CompiledSource) | ✅ |
-| 6 | 单元测试: 所有 Legado 规则语法 | ✅ 25/25 pass |
+| #   | 任务                                             | 状态          |
+| --- | ------------------------------------------------ | ------------- | ----------- | --- |
+| 1   | 添加 Rust 依赖 (scraper/sxd/rquickjs/reqwest 等) | ✅            |
+| 2   | Tokenizer: @ /                                   |               | / ## 分割器 | ✅  |
+| 3   | RuleSegment 解析: 类型.值.索引                   | ✅            |
+| 4   | Compiler: 规则字符串 → CompiledRule AST          | ✅            |
+| 5   | 编译缓存 (compile_source: JSON → CompiledSource) | ✅            |
+| 6   | 单元测试: 所有 Legado 规则语法                   | ✅ 25/25 pass |
 
 ### Phase 5b: RuleEvaluator 六大求值器
 
-| # | 任务 | 状态 |
-|---|------|------|
-| 7 | CssEval (scraper): class/id/tag/text/children/css | ✅ |
-| 8 | XpathEval (sxd-xpath): xpath.* 规则 | ✅ |
-| 9 | JsonEval (jsonpath-rust): json.* 规则 | ✅ |
-| 10 | RegexEval (regex): regex.* + replaceRegex | ✅ |
-| 11 | JsEval (rquickjs): js:前缀 + @js:后缀 | ✅ |
-| 12 | TmplEval: {{key}}/{{page}} + {$.field} | ✅ |
+| #   | 任务                                              | 状态 |
+| --- | ------------------------------------------------- | ---- |
+| 7   | CssEval (scraper): class/id/tag/text/children/css | ✅   |
+| 8   | XpathEval (sxd-xpath): xpath.\* 规则              | ✅   |
+| 9   | JsonEval (jsonpath-rust): json.\* 规则            | ✅   |
+| 10  | RegexEval (regex): regex.\* + replaceRegex        | ✅   |
+| 11  | JsEval (rquickjs): js:前缀 + @js:后缀             | ✅   |
+| 12  | TmplEval: {{key}}/{{page}} + {$.field}            | ✅   |
 
 ### Phase 5c: SourcePipeline 四大管线
 
-| # | 任务 | 状态 |
-|---|------|------|
-| 13 | HTTP 客户端 (reqwest + cookie_store + 编码) | ✅ |
-| 14 | Search 管线: 搜索→bookList→字段提取 | ✅ |
-| 15 | BookInfo 管线: 详情页→字段提取 | ✅ |
-| 16 | ChapterList 管线: 目录页→章节列表 | ✅ |
-| 17 | ChapterContent 管线: 章节页→正文+清洗 | ✅ |
+| #   | 任务                                        | 状态 |
+| --- | ------------------------------------------- | ---- |
+| 13  | HTTP 客户端 (reqwest + cookie_store + 编码) | ✅   |
+| 14  | Search 管线: 搜索→bookList→字段提取         | ✅   |
+| 15  | BookInfo 管线: 详情页→字段提取              | ✅   |
+| 16  | ChapterList 管线: 目录页→章节列表           | ✅   |
+| 17  | ChapterContent 管线: 章节页→正文+清洗       | ✅   |
 
 ### Phase 5d: 书源管理 UI
 
-| # | 任务 | 状态 |
-|---|------|------|
-| 18 | 书源导入/导出 (Legado .txt/.json) | ✅ |
-| 19 | 书源管理页面 (启用/禁用/分组) | ✅ |
-| 20 | 发现页面 (ruleExplore 驱动) | ✅ |
-| 21 | 搜索页面 + 结果展示 | ✅ |
-| 22 | 集成验证: 真实书源端到端 | ✅ |
+| #   | 任务                              | 状态 |
+| --- | --------------------------------- | ---- |
+| 18  | 书源导入/导出 (Legado .txt/.json) | ✅   |
+| 19  | 书源管理页面 (启用/禁用/分组)     | ✅   |
+| 20  | 发现页面 (ruleExplore 驱动)       | ✅   |
+| 21  | 搜索页面 + 结果展示               | ✅   |
+| 22  | 集成验证: 真实书源端到端          | ✅   |
 
 ---
 
@@ -137,100 +137,100 @@ src/
 
 ### 修改文件
 
-| 文件 | 内容 |
-|------|------|
-| `src-tauri/Cargo.toml` | +14 crates (scraper/sxd/rquickjs/reqwest 等) |
-| `src-tauri/src/lib.rs` | +11 clippy allows (Rust 1.95) + 4 IPC 命令注册 |
-| `src-tauri/src/commands.rs` | +129 行 (import/list/delete source, search_books) |
-| `src/App.tsx` | +2 路由 (/sources, /search) |
-| `src/pages/BookshelfPage.tsx` | +2 导航按钮 (🔍搜索, 🌐书源) |
+| 文件                          | 内容                                              |
+| ----------------------------- | ------------------------------------------------- |
+| `src-tauri/Cargo.toml`        | +14 crates (scraper/sxd/rquickjs/reqwest 等)      |
+| `src-tauri/src/lib.rs`        | +11 clippy allows (Rust 1.95) + 4 IPC 命令注册    |
+| `src-tauri/src/commands.rs`   | +129 行 (import/list/delete source, search_books) |
+| `src/App.tsx`                 | +2 路由 (/sources, /search)                       |
+| `src/pages/BookshelfPage.tsx` | +2 导航按钮 (🔍搜索, 🌐书源)                      |
 
 ---
 
 ## 4. 新增依赖 (14 crates)
 
-| Crate | 版本 | 用途 |
-|-------|------|------|
-| scraper | 0.27 | CSS 选择器 HTML 解析 |
-| sxd-document | 0.3 | XML/XPath DOM |
-| sxd-xpath | 0.4 | W3C XPath 1.0 求值 |
-| jsonpath-rust | 1.0 | JSONPath 查询 |
-| rquickjs | 0.11 | 嵌入式 QuickJS 引擎 |
-| reqwest | 0.13 | 异步 HTTP 客户端 |
-| cookie_store | 0.22 | Cookie 持久化 |
-| url | 2.5 | URL 解析与拼接 |
-| chardetng | 1.0 | 编码检测 |
-| regex | 1.12 | 正则表达式 |
+| Crate         | 版本 | 用途                 |
+| ------------- | ---- | -------------------- |
+| scraper       | 0.27 | CSS 选择器 HTML 解析 |
+| sxd-document  | 0.3  | XML/XPath DOM        |
+| sxd-xpath     | 0.4  | W3C XPath 1.0 求值   |
+| jsonpath-rust | 1.0  | JSONPath 查询        |
+| rquickjs      | 0.11 | 嵌入式 QuickJS 引擎  |
+| reqwest       | 0.13 | 异步 HTTP 客户端     |
+| cookie_store  | 0.22 | Cookie 持久化        |
+| url           | 2.5  | URL 解析与拼接       |
+| chardetng     | 1.0  | 编码检测             |
+| regex         | 1.12 | 正则表达式           |
 
 ---
 
 ## 5. Tauri IPC 命令总览 (Phase 1-5: 21 个)
 
-| # | 命令 | Phase | 说明 |
-|---|------|-------|------|
-| 1 | `greet` | 1 | 测试 |
-| 2 | `get_app_version` | 1 | 版本号 |
-| 3 | `import_book` | 2 | 导入本地书籍 |
-| 4 | `list_books` | 2 | 书架列表 |
-| 5 | `delete_book` | 2 | 删除书籍 |
-| 6 | `get_chapter_content` | 2 | 章节 HTML |
-| 7 | `get_chapters` | 3 | 章节列表 |
-| 8 | `save_progress` | 3 | 保存进度 |
-| 9 | `add_bookmark` | 4 | 添加书签 |
-| 10 | `list_bookmarks` | 4 | 书签列表 |
-| 11 | `delete_bookmark` | 4 | 删除书签 |
-| 12 | `add_annotation` | 4 | 添加笔记 |
-| 13 | `update_annotation_note` | 4 | 更新笔记 |
-| 14 | `list_annotations` | 4 | 笔记列表 |
-| 15 | `delete_annotation` | 4 | 删除笔记 |
-| 16 | `log_reading_session` | 4 | 记录阅读会话 |
-| 17 | `get_reading_stats` | 4 | 阅读统计 |
-| 18 | `import_book_source` | 5 | 导入书源 JSON |
-| 19 | `list_book_sources` | 5 | 书源列表 |
-| 20 | `delete_book_source` | 5 | 删除书源 |
-| 21 | `search_books` | 5 | 在线搜索 (async) |
+| #   | 命令                     | Phase | 说明             |
+| --- | ------------------------ | ----- | ---------------- |
+| 1   | `greet`                  | 1     | 测试             |
+| 2   | `get_app_version`        | 1     | 版本号           |
+| 3   | `import_book`            | 2     | 导入本地书籍     |
+| 4   | `list_books`             | 2     | 书架列表         |
+| 5   | `delete_book`            | 2     | 删除书籍         |
+| 6   | `get_chapter_content`    | 2     | 章节 HTML        |
+| 7   | `get_chapters`           | 3     | 章节列表         |
+| 8   | `save_progress`          | 3     | 保存进度         |
+| 9   | `add_bookmark`           | 4     | 添加书签         |
+| 10  | `list_bookmarks`         | 4     | 书签列表         |
+| 11  | `delete_bookmark`        | 4     | 删除书签         |
+| 12  | `add_annotation`         | 4     | 添加笔记         |
+| 13  | `update_annotation_note` | 4     | 更新笔记         |
+| 14  | `list_annotations`       | 4     | 笔记列表         |
+| 15  | `delete_annotation`      | 4     | 删除笔记         |
+| 16  | `log_reading_session`    | 4     | 记录阅读会话     |
+| 17  | `get_reading_stats`      | 4     | 阅读统计         |
+| 18  | `import_book_source`     | 5     | 导入书源 JSON    |
+| 19  | `list_book_sources`      | 5     | 书源列表         |
+| 20  | `delete_book_source`     | 5     | 删除书源         |
+| 21  | `search_books`           | 5     | 在线搜索 (async) |
 
 ---
 
 ## 6. 规则语法支持矩阵
 
-| 规则类型 | 语法 | 状态 |
-|----------|------|------|
-| `class` | `class.title.0` | ✅ |
-| `id` | `id.content` | ✅ |
-| `tag` | `tag.a.1` | ✅ |
-| `text` | `text.下一章` | ⚠️ `:contains()` 不支持，改用手动文本过滤 |
-| `children` | `children` | ✅ |
-| `css` | `css.div.content>p` | ✅ |
-| `xpath` | `xpath.//div[@class='content']` | ✅ |
-| `json` | `json.$.data.books[*]` | ⚠️ API 调整中 |
-| `regex` | `regex.第(\\d+)章.0` | ✅ |
-| `js` | `js.document.querySelector(...)` | ⚠️ rquickjs 字符串转义待完善 |
-| `\|\|` | 备选规则 | ✅ |
-| `##` | 注释 | ✅ |
-| `{{key}}` / `{{page}}` | URL 模板变量 | ✅ |
-| `{$.field}` | 跨步骤变量 | ⚠️ 替换逻辑待修复 |
-| `@text` / `@html` / `@href` / `@src` | 提取属性 | ✅ |
-| `@js:` | JS 后处理 | ✅ |
-| `replaceRegex` | 正文清洗 | ✅ |
-| `webJs` | Headless 浏览器渲染 | ❌ 推迟到后续版本 |
-| `loginUi` | 登录流程 | ❌ 推迟到后续版本 |
+| 规则类型                             | 语法                             | 状态                                      |
+| ------------------------------------ | -------------------------------- | ----------------------------------------- |
+| `class`                              | `class.title.0`                  | ✅                                        |
+| `id`                                 | `id.content`                     | ✅                                        |
+| `tag`                                | `tag.a.1`                        | ✅                                        |
+| `text`                               | `text.下一章`                    | ⚠️ `:contains()` 不支持，改用手动文本过滤 |
+| `children`                           | `children`                       | ✅                                        |
+| `css`                                | `css.div.content>p`              | ✅                                        |
+| `xpath`                              | `xpath.//div[@class='content']`  | ✅                                        |
+| `json`                               | `json.$.data.books[*]`           | ⚠️ API 调整中                             |
+| `regex`                              | `regex.第(\\d+)章.0`             | ✅                                        |
+| `js`                                 | `js.document.querySelector(...)` | ⚠️ rquickjs 字符串转义待完善              |
+| `\|\|`                               | 备选规则                         | ✅                                        |
+| `##`                                 | 注释                             | ✅                                        |
+| `{{key}}` / `{{page}}`               | URL 模板变量                     | ✅                                        |
+| `{$.field}`                          | 跨步骤变量                       | ⚠️ 替换逻辑待修复                         |
+| `@text` / `@html` / `@href` / `@src` | 提取属性                         | ✅                                        |
+| `@js:`                               | JS 后处理                        | ✅                                        |
+| `replaceRegex`                       | 正文清洗                         | ✅                                        |
+| `webJs`                              | Headless 浏览器渲染              | ❌ 推迟到后续版本                         |
+| `loginUi`                            | 登录流程                         | ❌ 推迟到后续版本                         |
 
 ---
 
 ## 7. 验证结果
 
-| 检查项 | 结果 |
-|--------|------|
-| `cargo check` | ✅ |
-| `cargo test` | ✅ 39 passed, 8 ignored |
-| `cargo clippy -- -D warnings` | ✅ |
-| `cargo fmt --check` | ✅ |
-| `tsc --noEmit` | ✅ |
-| `eslint` | ✅ 0 errors |
-| `prettier --check` | ✅ |
-| `vite build` | ✅ 2443 modules → 1077KB JS |
-| `tauri build` | ✅ .exe + .msi + .nsis |
+| 检查项                        | 结果                        |
+| ----------------------------- | --------------------------- |
+| `cargo check`                 | ✅                          |
+| `cargo test`                  | ✅ 39 passed, 8 ignored     |
+| `cargo clippy -- -D warnings` | ✅                          |
+| `cargo fmt --check`           | ✅                          |
+| `tsc --noEmit`                | ✅                          |
+| `eslint`                      | ✅ 0 errors                 |
+| `prettier --check`            | ✅                          |
+| `vite build`                  | ✅ 2443 modules → 1077KB JS |
+| `tauri build`                 | ✅ .exe + .msi + .nsis      |
 
 ---
 

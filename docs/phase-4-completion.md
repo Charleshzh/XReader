@@ -8,16 +8,16 @@
 
 ## 1. 交付清单
 
-| # | 任务 | 状态 |
-|---|------|------|
-| 1 | Rust: bookmarks CRUD 命令 (add/list/delete) | ✅ |
-| 2 | Rust: annotations CRUD 命令 (add/update/list/delete) | ✅ |
-| 3 | Rust: reading stats 命令 (log_session/get_stats) | ✅ |
-| 4 | 前端: 书签按钮 + 书签列表面板 | ✅ |
-| 5 | 前端: 文本选择高亮 + 笔记编辑 | ✅ |
-| 6 | 前端: 阅读计时器 + 字数统计 | ✅ |
-| 7 | 前端: StatsPage 统计面板 + recharts 图表 | ✅ |
-| 8 | 集成验证: 标注→统计全流程 | ✅ |
+| #   | 任务                                                 | 状态 |
+| --- | ---------------------------------------------------- | ---- |
+| 1   | Rust: bookmarks CRUD 命令 (add/list/delete)          | ✅   |
+| 2   | Rust: annotations CRUD 命令 (add/update/list/delete) | ✅   |
+| 3   | Rust: reading stats 命令 (log_session/get_stats)     | ✅   |
+| 4   | 前端: 书签按钮 + 书签列表面板                        | ✅   |
+| 5   | 前端: 文本选择高亮 + 笔记编辑                        | ✅   |
+| 6   | 前端: 阅读计时器 + 字数统计                          | ✅   |
+| 7   | 前端: StatsPage 统计面板 + recharts 图表             | ✅   |
+| 8   | 集成验证: 标注→统计全流程                            | ✅   |
 
 ---
 
@@ -25,27 +25,27 @@
 
 ### 2.1 书签 (Bookmarks)
 
-| 命令 | 参数 | 返回 | SQL |
-|------|------|------|-----|
-| `add_bookmark` | `book_id, chapter_index, position, label` | `BookmarkItem` | INSERT |
-| `list_bookmarks` | `book_id` | `Vec<BookmarkItem>` | SELECT … ORDER BY chapter_index, position |
-| `delete_bookmark` | `id` | `()` | DELETE WHERE id |
+| 命令              | 参数                                      | 返回                | SQL                                       |
+| ----------------- | ----------------------------------------- | ------------------- | ----------------------------------------- |
+| `add_bookmark`    | `book_id, chapter_index, position, label` | `BookmarkItem`      | INSERT                                    |
+| `list_bookmarks`  | `book_id`                                 | `Vec<BookmarkItem>` | SELECT … ORDER BY chapter_index, position |
+| `delete_bookmark` | `id`                                      | `()`                | DELETE WHERE id                           |
 
 ### 2.2 笔记/高亮 (Annotations)
 
-| 命令 | 参数 | 返回 | SQL |
-|------|------|------|-----|
-| `add_annotation` | `book_id, chapter_index, start_position, end_position, text, note, color` | `AnnotationItem` | INSERT |
-| `list_annotations` | `book_id, chapter_index` | `Vec<AnnotationItem>` | SELECT … WHERE chapter_index |
-| `update_annotation_note` | `id, note` | `()` | UPDATE SET note, updated_at |
-| `delete_annotation` | `id` | `()` | DELETE WHERE id |
+| 命令                     | 参数                                                                      | 返回                  | SQL                          |
+| ------------------------ | ------------------------------------------------------------------------- | --------------------- | ---------------------------- |
+| `add_annotation`         | `book_id, chapter_index, start_position, end_position, text, note, color` | `AnnotationItem`      | INSERT                       |
+| `list_annotations`       | `book_id, chapter_index`                                                  | `Vec<AnnotationItem>` | SELECT … WHERE chapter_index |
+| `update_annotation_note` | `id, note`                                                                | `()`                  | UPDATE SET note, updated_at  |
+| `delete_annotation`      | `id`                                                                      | `()`                  | DELETE WHERE id              |
 
 ### 2.3 阅读统计 (Reading Stats)
 
-| 命令 | 参数 | 返回 | SQL |
-|------|------|------|-----|
-| `log_reading_session` | `book_id, date, seconds, words` | `()` | UPSERT (ON CONFLICT DO UPDATE) |
-| `get_reading_stats` | `days` | `StatsSummary` | SUM 汇总 + SELECT … ORDER BY date DESC LIMIT |
+| 命令                  | 参数                            | 返回           | SQL                                          |
+| --------------------- | ------------------------------- | -------------- | -------------------------------------------- |
+| `log_reading_session` | `book_id, date, seconds, words` | `()`           | UPSERT (ON CONFLICT DO UPDATE)               |
+| `get_reading_stats`   | `days`                          | `StatsSummary` | SUM 汇总 + SELECT … ORDER BY date DESC LIMIT |
 
 ### 2.4 数据模型
 
@@ -85,27 +85,27 @@ pub struct StatsSummary {
 
 ### 3.1 新增依赖
 
-| 包 | 版本 | 用途 |
-|----|------|------|
+| 包       | 版本  | 用途           |
+| -------- | ----- | -------------- |
 | recharts | 3.8.1 | 阅读统计柱状图 |
 
 ### 3.2 新增组件
 
-| 组件 | 文件 | 行数 | 功能 |
-|------|------|------|------|
-| BookmarkPanel | `components/reader/BookmarkPanel.tsx` | 97 | 右侧滑出书签面板：添加/删除/跳转 |
-| AnnotationPanel | `components/reader/AnnotationPanel.tsx` | 136 | 右侧滑出笔记面板：查看/编辑/删除 |
-| StatsPage | `pages/StatsPage.tsx` | 118 | /stats 路由页面：统计卡片 + 图表 |
+| 组件            | 文件                                    | 行数 | 功能                             |
+| --------------- | --------------------------------------- | ---- | -------------------------------- |
+| BookmarkPanel   | `components/reader/BookmarkPanel.tsx`   | 97   | 右侧滑出书签面板：添加/删除/跳转 |
+| AnnotationPanel | `components/reader/AnnotationPanel.tsx` | 136  | 右侧滑出笔记面板：查看/编辑/删除 |
+| StatsPage       | `pages/StatsPage.tsx`                   | 118  | /stats 路由页面：统计卡片 + 图表 |
 
 ### 3.3 修改组件
 
-| 文件 | 修改内容 |
-|------|----------|
-| `ReaderShell.tsx` | 新增书签📑+笔记🖍按钮、`handleBack()` 自动调用 `endSession()`、10 秒阅读计时器 |
-| `ReaderPage.tsx` | 条件渲染 `BookmarkPanel` / `AnnotationPanel` |
-| `BookshelfPage.tsx` | 新增统计📊按钮 → `navigate(/stats)` |
-| `App.tsx` | 新增 `/stats` 路由 |
-| `readerStore.ts` | 扩展至 205 行：Bookmark/Annotation/Session/Stats 全部状态和操作 |
+| 文件                | 修改内容                                                                       |
+| ------------------- | ------------------------------------------------------------------------------ |
+| `ReaderShell.tsx`   | 新增书签📑+笔记🖍按钮、`handleBack()` 自动调用 `endSession()`、10 秒阅读计时器 |
+| `ReaderPage.tsx`    | 条件渲染 `BookmarkPanel` / `AnnotationPanel`                                   |
+| `BookshelfPage.tsx` | 新增统计📊按钮 → `navigate(/stats)`                                            |
+| `App.tsx`           | 新增 `/stats` 路由                                                             |
+| `readerStore.ts`    | 扩展至 205 行：Bookmark/Annotation/Session/Stats 全部状态和操作                |
 
 ### 3.4 组件布局 (ReaderPage 增强)
 
@@ -150,7 +150,9 @@ useEffect(() => {
       sessionSeconds: s.sessionSeconds + 10,
     }));
   }, 10000);
-  return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  return () => {
+    if (timerRef.current) clearInterval(timerRef.current);
+  };
 }, []);
 ```
 
@@ -176,6 +178,7 @@ useEffect(() => {
 ## 4. readerStore 扩展
 
 新增状态字段:
+
 ```
 bookmarks: BookmarkItem[]      // 当前书籍全部书签
 bookmarksOpen: boolean         // 书签面板开关
@@ -188,6 +191,7 @@ isReading: boolean             // 是否正在阅读
 ```
 
 新增操作:
+
 ```
 addBookmark(label)
 loadBookmarks()
@@ -212,45 +216,46 @@ getStats(days)        // → get_reading_stats IPC
 
 ## 5. Tauri IPC 命令总览 (Phase 1-4)
 
-| # | 命令 | Phase |
-|---|------|-------|
-| 1 | `greet` | 1 |
-| 2 | `get_app_version` | 1 |
-| 3 | `import_book` | 2 |
-| 4 | `list_books` | 2 |
-| 5 | `delete_book` | 2 |
-| 6 | `get_chapter_content` | 2 |
-| 7 | `get_chapters` | 3 |
-| 8 | `save_progress` | 3 |
-| 9 | `add_bookmark` | 4 |
-| 10 | `list_bookmarks` | 4 |
-| 11 | `delete_bookmark` | 4 |
-| 12 | `add_annotation` | 4 |
-| 13 | `update_annotation_note` | 4 |
-| 14 | `list_annotations` | 4 |
-| 15 | `delete_annotation` | 4 |
-| 16 | `log_reading_session` | 4 |
-| 17 | `get_reading_stats` | 4 |
+| #   | 命令                     | Phase |
+| --- | ------------------------ | ----- |
+| 1   | `greet`                  | 1     |
+| 2   | `get_app_version`        | 1     |
+| 3   | `import_book`            | 2     |
+| 4   | `list_books`             | 2     |
+| 5   | `delete_book`            | 2     |
+| 6   | `get_chapter_content`    | 2     |
+| 7   | `get_chapters`           | 3     |
+| 8   | `save_progress`          | 3     |
+| 9   | `add_bookmark`           | 4     |
+| 10  | `list_bookmarks`         | 4     |
+| 11  | `delete_bookmark`        | 4     |
+| 12  | `add_annotation`         | 4     |
+| 13  | `update_annotation_note` | 4     |
+| 14  | `list_annotations`       | 4     |
+| 15  | `delete_annotation`      | 4     |
+| 16  | `log_reading_session`    | 4     |
+| 17  | `get_reading_stats`      | 4     |
 
 ---
 
 ## 6. 验证结果
 
-| 检查项 | 结果 |
-|--------|------|
-| `cargo check` | ✅ |
-| `cargo test` | ✅ |
-| `tsc --noEmit` | ✅ 零错误 |
-| `eslint` | ✅ 0 errors |
-| `prettier --check` | ✅ all files formatted |
-| `vite build` | ✅ 2440 modules → 1073KB JS |
-| `tauri build` | ✅ .exe + .msi + .nsis |
+| 检查项             | 结果                        |
+| ------------------ | --------------------------- |
+| `cargo check`      | ✅                          |
+| `cargo test`       | ✅                          |
+| `tsc --noEmit`     | ✅ 零错误                   |
+| `eslint`           | ✅ 0 errors                 |
+| `prettier --check` | ✅ all files formatted      |
+| `vite build`       | ✅ 2440 modules → 1073KB JS |
+| `tauri build`      | ✅ .exe + .msi + .nsis      |
 
 ---
 
 ## 7. 新增/修改文件清单
 
 ### 新增 (3 文件)
+
 ```
 src/components/reader/BookmarkPanel.tsx   书签面板 (97 行)
 src/components/reader/AnnotationPanel.tsx 笔记面板 (136 行)
@@ -258,6 +263,7 @@ src/pages/StatsPage.tsx                   统计页面 (118 行)
 ```
 
 ### 修改 (7 文件)
+
 ```
 src-tauri/src/commands.rs     +290 行 (9 个新命令)
 src-tauri/src/lib.rs          +9 行 (注册新命令)
@@ -288,11 +294,13 @@ src/App.tsx                   +2 行 (/stats 路由)
 预计工时 90-140h，最核心、最复杂的模块：
 
 **5a: Tokenizer + RuleCompiler (20-30h)**
+
 - 实现 `@` / `||` / `##` / `{{ }}` / `{$.}` 分词器
 - 编译为 RuleSegment AST
 - 编译缓存
 
 **5b: RuleEvaluator 六大求值器 (40-60h)**
+
 - CssEval (scraper)
 - XpathEval (sxd-xpath)
 - JsonEval (jsonpath-rust)
@@ -301,8 +309,10 @@ src/App.tsx                   +2 行 (/stats 路由)
 - TmplEval (变量替换)
 
 **5c: SourcePipeline 四大管线 (15-25h)**
+
 - Search / BookInfo / ChapterList / ChapterContent
 
 **5d: 书源管理 UI (15-25h)**
+
 - 导入/导出 Legado JSON
 - 发现页 (ruleExplore)

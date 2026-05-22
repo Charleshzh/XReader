@@ -8,34 +8,34 @@
 
 ## 1. 交付清单
 
-| # | 任务 | 状态 |
-|---|------|------|
-| 1 | Git init + .gitignore | ✅ |
-| 2 | Tauri v2 项目脚手架 | ✅ |
-| 3 | React + TypeScript + Tailwind + shadcn/ui | ✅ |
-| 4 | ESLint + Prettier 配置 | ✅ |
-| 5 | SQLite 数据库初始化 + refinery 迁移框架 | ✅ |
-| 6 | 基础 Tauri IPC 通信框架 | ✅ |
-| 7 | `.github/workflows/ci.yml` | ✅ |
-| 8 | 验证：应用可启动 + CI 通过 | ✅ |
+| #   | 任务                                      | 状态 |
+| --- | ----------------------------------------- | ---- |
+| 1   | Git init + .gitignore                     | ✅   |
+| 2   | Tauri v2 项目脚手架                       | ✅   |
+| 3   | React + TypeScript + Tailwind + shadcn/ui | ✅   |
+| 4   | ESLint + Prettier 配置                    | ✅   |
+| 5   | SQLite 数据库初始化 + refinery 迁移框架   | ✅   |
+| 6   | 基础 Tauri IPC 通信框架                   | ✅   |
+| 7   | `.github/workflows/ci.yml`                | ✅   |
+| 8   | 验证：应用可启动 + CI 通过                | ✅   |
 
 ---
 
 ## 2. 技术栈确认
 
-| 层级 | 技术 | 版本 |
-|------|------|------|
-| 桌面框架 | Tauri | v2.11.2 |
-| UI 框架 | React | 19.2.6 |
-| 语言 | TypeScript | 5.8.3 |
-| 构建工具 | Vite | 7.3.3 |
-| 样式 | Tailwind CSS | 3.4.19 |
-| 组件库 | shadcn/ui | (Button 已就绪) |
-| 包管理 | pnpm | 11.2.2 |
-| 代码规范 | ESLint 9 + Prettier 3 | — |
-| 数据库 | SQLite (rusqlite bundled) | 0.32.1 |
-| 迁移框架 | refinery | 0.8.16 |
-| Rust 异步 | tokio | 1.52.3 |
+| 层级      | 技术                      | 版本            |
+| --------- | ------------------------- | --------------- |
+| 桌面框架  | Tauri                     | v2.11.2         |
+| UI 框架   | React                     | 19.2.6          |
+| 语言      | TypeScript                | 5.8.3           |
+| 构建工具  | Vite                      | 7.3.3           |
+| 样式      | Tailwind CSS              | 3.4.19          |
+| 组件库    | shadcn/ui                 | (Button 已就绪) |
+| 包管理    | pnpm                      | 11.2.2          |
+| 代码规范  | ESLint 9 + Prettier 3     | —               |
+| 数据库    | SQLite (rusqlite bundled) | 0.32.1          |
+| 迁移框架  | refinery                  | 0.8.16          |
+| Rust 异步 | tokio                     | 1.52.3          |
 
 ---
 
@@ -82,17 +82,17 @@ xreader/
 
 ## 4. 数据库 Schema (V1)
 
-| 表名 | 用途 | 关键列 |
-|------|------|--------|
-| `books` | 书籍元数据 | id(PK), title, author, format, source_type, file_path |
-| `chapters` | 章节目录 | id(PK), book_id(FK), index_num, url, content_path, fetched |
-| `reading_progress` | 阅读进度 | book_id(PK/FK), chapter_index, position, updated_at |
-| `bookmarks` | 书签 | id(PK), book_id(FK), chapter_index, position, label |
-| `annotations` | 笔记/高亮 | id(PK), book_id(FK), text, note, color |
-| `book_sources` | 书源规则 | id(PK), name, base_url, rule_json (Legado 兼容) |
-| `sync_meta` | 同步元数据 | table_name(PK), last_synced_at, version |
-| `reading_stats` | 阅读统计 | id(PK), book_id(FK), date, read_seconds, read_words |
-| `app_settings` | 应用设置 | key(PK), value |
+| 表名               | 用途       | 关键列                                                     |
+| ------------------ | ---------- | ---------------------------------------------------------- |
+| `books`            | 书籍元数据 | id(PK), title, author, format, source_type, file_path      |
+| `chapters`         | 章节目录   | id(PK), book_id(FK), index_num, url, content_path, fetched |
+| `reading_progress` | 阅读进度   | book_id(PK/FK), chapter_index, position, updated_at        |
+| `bookmarks`        | 书签       | id(PK), book_id(FK), chapter_index, position, label        |
+| `annotations`      | 笔记/高亮  | id(PK), book_id(FK), text, note, color                     |
+| `book_sources`     | 书源规则   | id(PK), name, base_url, rule_json (Legado 兼容)            |
+| `sync_meta`        | 同步元数据 | table_name(PK), last_synced_at, version                    |
+| `reading_stats`    | 阅读统计   | id(PK), book_id(FK), date, read_seconds, read_words        |
+| `app_settings`     | 应用设置   | key(PK), value                                             |
 
 ---
 
@@ -100,29 +100,29 @@ xreader/
 
 ### 5.1 编译与构建
 
-| 命令 | 结果 |
-|------|------|
-| `cargo check` | ✅ 零错误，零警告 |
-| `cargo test` | ✅ 3 suites passed |
-| `cargo clippy -- -D warnings` | ✅ 无诊断 |
-| `cargo fmt --check` | ✅ 格式正确 |
-| `tsc --noEmit` | ✅ 类型检查通过 |
-| `vite build` | ✅ 29 modules → 194KB JS + 8KB CSS |
-| `tauri build` | ✅ 生成 .exe + .msi + .nsis 安装包 |
+| 命令                          | 结果                               |
+| ----------------------------- | ---------------------------------- |
+| `cargo check`                 | ✅ 零错误，零警告                  |
+| `cargo test`                  | ✅ 3 suites passed                 |
+| `cargo clippy -- -D warnings` | ✅ 无诊断                          |
+| `cargo fmt --check`           | ✅ 格式正确                        |
+| `tsc --noEmit`                | ✅ 类型检查通过                    |
+| `vite build`                  | ✅ 29 modules → 194KB JS + 8KB CSS |
+| `tauri build`                 | ✅ 生成 .exe + .msi + .nsis 安装包 |
 
 ### 5.2 代码规范
 
-| 工具 | 结果 |
-|------|------|
-| ESLint | ✅ 0 errors, 1 warning (shadcn 预期的 re-export 警告) |
-| Prettier | ✅ 5/5 files formatted correctly |
+| 工具     | 结果                                                  |
+| -------- | ----------------------------------------------------- |
+| ESLint   | ✅ 0 errors, 1 warning (shadcn 预期的 re-export 警告) |
+| Prettier | ✅ 5/5 files formatted correctly                      |
 
 ### 5.3 产物
 
-| 文件 | 路径 |
-|------|------|
-| 可执行文件 | `src-tauri/target/release/xreader.exe` |
-| MSI 安装包 | `src-tauri/target/release/bundle/msi/XReader_0.1.0_x64_en-US.msi` |
+| 文件        | 路径                                                               |
+| ----------- | ------------------------------------------------------------------ |
+| 可执行文件  | `src-tauri/target/release/xreader.exe`                             |
+| MSI 安装包  | `src-tauri/target/release/bundle/msi/XReader_0.1.0_x64_en-US.msi`  |
 | NSIS 安装包 | `src-tauri/target/release/bundle/nsis/XReader_0.1.0_x64-setup.exe` |
 
 ---

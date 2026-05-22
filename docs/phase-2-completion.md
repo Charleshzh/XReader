@@ -8,16 +8,16 @@
 
 ## 1. 交付清单
 
-| # | 任务 | 状态 |
-|---|------|------|
-| 1 | BookFormat trait + FormatRegistry | ✅ |
-| 2 | EPUB 解析 (元数据/封面/目录/内容) | ✅ |
-| 3 | TXT 编码检测 + 正则分章 | ✅ |
-| 4 | PDF 元数据提取 | ✅ |
-| 5 | Tauri commands: import_book / list_books / delete_book / get_chapter_content | ✅ |
-| 6 | 书架 UI (网格/列表/搜索) | ✅ |
-| 7 | 导入对话框 + 多文件选择 | ✅ |
-| 8 | 集成验证: 编译 + 构建 + 打包 | ✅ |
+| #   | 任务                                                                         | 状态 |
+| --- | ---------------------------------------------------------------------------- | ---- |
+| 1   | BookFormat trait + FormatRegistry                                            | ✅   |
+| 2   | EPUB 解析 (元数据/封面/目录/内容)                                            | ✅   |
+| 3   | TXT 编码检测 + 正则分章                                                      | ✅   |
+| 4   | PDF 元数据提取                                                               | ✅   |
+| 5   | Tauri commands: import_book / list_books / delete_book / get_chapter_content | ✅   |
+| 6   | 书架 UI (网格/列表/搜索)                                                     | ✅   |
+| 7   | 导入对话框 + 多文件选择                                                      | ✅   |
+| 8   | 集成验证: 编译 + 构建 + 打包                                                 | ✅   |
 
 ---
 
@@ -65,12 +65,12 @@ pub struct FormatRegistry { … }
 
 ### 2.5 Tauri Commands (`src/commands.rs`)
 
-| 命令 | 参数 | 返回 | 说明 |
-|------|------|------|------|
-| `import_book` | `file_path: String` | `ImportResult` | 检测格式→解析→写DB→提取封面→写章节 |
-| `list_books` | — | `Vec<BookListItem>` | 按 updated_at 降序 |
-| `delete_book` | `id: String` | `()` | 级联删除章节/进度/书签/笔记 |
-| `get_chapter_content` | `book_id, chapter_index` | `String` | 读取章节 HTML |
+| 命令                  | 参数                     | 返回                | 说明                               |
+| --------------------- | ------------------------ | ------------------- | ---------------------------------- |
+| `import_book`         | `file_path: String`      | `ImportResult`      | 检测格式→解析→写DB→提取封面→写章节 |
+| `list_books`          | —                        | `Vec<BookListItem>` | 按 updated_at 降序                 |
+| `delete_book`         | `id: String`             | `()`                | 级联删除章节/进度/书签/笔记        |
+| `get_chapter_content` | `book_id, chapter_index` | `String`            | 读取章节 HTML                      |
 
 ### 2.6 数据库查询 (`db/queries.rs`)
 
@@ -84,11 +84,11 @@ pub struct FormatRegistry { … }
 
 ### 3.1 新增依赖
 
-| 包 | 版本 | 用途 |
-|----|------|------|
-| react-router-dom | 7.15.1 | 路由 |
-| zustand | 5.0.13 | 状态管理 |
-| @tauri-apps/plugin-dialog | 2.7.1 | 文件选择器 |
+| 包                        | 版本   | 用途       |
+| ------------------------- | ------ | ---------- |
+| react-router-dom          | 7.15.1 | 路由       |
+| zustand                   | 5.0.13 | 状态管理   |
+| @tauri-apps/plugin-dialog | 2.7.1  | 文件选择器 |
 
 ### 3.2 组件树
 
@@ -132,23 +132,23 @@ interface BookState {
 
 ## 4. 验证结果
 
-| 检查项 | 结果 |
-|--------|------|
-| `cargo check` | ✅ 零错误零警告 |
-| `cargo test` | ✅ pass |
-| `cargo clippy` | ✅ 无诊断 |
-| `tsc --noEmit` | ✅ 类型检查通过 |
-| ESLint | ✅ 0 errors |
-| `vite build` | ✅ 1780 modules → 274KB JS + 15KB CSS |
-| `tauri build` | ✅ .exe + .msi + .nsis 生成 |
+| 检查项         | 结果                                  |
+| -------------- | ------------------------------------- |
+| `cargo check`  | ✅ 零错误零警告                       |
+| `cargo test`   | ✅ pass                               |
+| `cargo clippy` | ✅ 无诊断                             |
+| `tsc --noEmit` | ✅ 类型检查通过                       |
+| ESLint         | ✅ 0 errors                           |
+| `vite build`   | ✅ 1780 modules → 274KB JS + 15KB CSS |
+| `tauri build`  | ✅ .exe + .msi + .nsis 生成           |
 
 ### 产物
 
-| 文件 | 大小 |
-|------|------|
-| `xreader.exe` | release 优化编译 |
-| `XReader_0.1.0_x64_en-US.msi` | WiX 打包 |
-| `XReader_0.1.0_x64-setup.exe` | NSIS 打包 |
+| 文件                          | 大小             |
+| ----------------------------- | ---------------- |
+| `xreader.exe`                 | release 优化编译 |
+| `XReader_0.1.0_x64_en-US.msi` | WiX 打包         |
+| `XReader_0.1.0_x64-setup.exe` | NSIS 打包        |
 
 ---
 

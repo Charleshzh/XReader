@@ -8,18 +8,18 @@
 
 ## 1. 交付清单
 
-| # | 任务 | 状态 |
-|---|------|------|
-| 1 | 安装 pdfjs-dist + 阅读器依赖 | ✅ |
-| 2 | ReaderPage 路由 + 从 BookshelfPage 导航 | ✅ |
-| 3 | readerStore: 章节加载/进度/设置 | ✅ |
-| 4 | ReaderShell: 统一阅读器外壳布局 | ✅ |
-| 5 | HtmlContentView: EPUB/TXT 渲染 (滚动/翻页) | ✅ |
-| 6 | PdfContentView: pdf.js 集成 (翻页/缩放) | ✅ |
-| 7 | ChapterTOC 章节目录侧边栏 | ✅ |
-| 8 | ReaderSettings: 字体/行距/主题面板 | ✅ |
-| 9 | 阅读进度记录与恢复 | ✅ |
-| 10 | 集成验证: 三种格式阅读流程 | ✅ |
+| #   | 任务                                       | 状态 |
+| --- | ------------------------------------------ | ---- |
+| 1   | 安装 pdfjs-dist + 阅读器依赖               | ✅   |
+| 2   | ReaderPage 路由 + 从 BookshelfPage 导航    | ✅   |
+| 3   | readerStore: 章节加载/进度/设置            | ✅   |
+| 4   | ReaderShell: 统一阅读器外壳布局            | ✅   |
+| 5   | HtmlContentView: EPUB/TXT 渲染 (滚动/翻页) | ✅   |
+| 6   | PdfContentView: pdf.js 集成 (翻页/缩放)    | ✅   |
+| 7   | ChapterTOC 章节目录侧边栏                  | ✅   |
+| 8   | ReaderSettings: 字体/行距/主题面板         | ✅   |
+| 9   | 阅读进度记录与恢复                         | ✅   |
+| 10  | 集成验证: 三种格式阅读流程                 | ✅   |
 
 ---
 
@@ -154,14 +154,14 @@ interface ReaderState {
 
 ## 6. 验证结果
 
-| 检查项 | 结果 |
-|--------|------|
-| `cargo check` | ✅ |
-| `cargo test` | ✅ |
-| `tsc --noEmit` | ✅ 零错误 |
-| ESLint | ✅ |
-| `vite build` | ✅ 1789 modules → 702KB JS + 2.1MB pdf.worker |
-| `tauri build` | ✅ .exe + .msi + .nsis |
+| 检查项         | 结果                                          |
+| -------------- | --------------------------------------------- |
+| `cargo check`  | ✅                                            |
+| `cargo test`   | ✅                                            |
+| `tsc --noEmit` | ✅ 零错误                                     |
+| ESLint         | ✅                                            |
+| `vite build`   | ✅ 1789 modules → 702KB JS + 2.1MB pdf.worker |
+| `tauri build`  | ✅ .exe + .msi + .nsis                        |
 
 ---
 
