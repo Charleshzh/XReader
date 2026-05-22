@@ -92,6 +92,7 @@ export function BookshelfPage() {
             />
             {search && (
               <button
+                aria-label="清空搜索"
                 onClick={() => setSearch("")}
                 className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
@@ -99,24 +100,50 @@ export function BookshelfPage() {
               </button>
             )}
           </div>
-          <Button variant="ghost" size="icon" onClick={() => navigate("/stats")}>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="打开阅读统计"
+            onClick={() => navigate("/stats")}
+          >
             <BarChart3 className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="icon" onClick={() => navigate("/search")}>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="打开搜索书籍"
+            onClick={() => navigate("/search")}
+          >
             <Search className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="icon" onClick={() => navigate("/discover")}>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="打开发现页"
+            onClick={() => navigate("/discover")}
+          >
             <Compass className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="icon" onClick={() => navigate("/sources")}>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="打开书源管理"
+            onClick={() => navigate("/sources")}
+          >
             <Globe className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="icon" onClick={() => navigate("/settings")}>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="打开设置"
+            onClick={() => navigate("/settings")}
+          >
             <Settings className="h-4 w-4" />
           </Button>
           <Button
             variant="ghost"
             size="icon"
+            aria-label={viewMode === "grid" ? "切换为列表视图" : "切换为网格视图"}
             onClick={() => setViewMode(viewMode === "grid" ? "list" : "grid")}
           >
             {viewMode === "grid" ? (

@@ -17,13 +17,38 @@ function fmtWords(n: number): string {
   return String(n);
 }
 
+const EMPTY_STATS: StatsSummary = {
+  total_seconds: 0,
+  total_words: 0,
+  daily: [],
+};
+
 export function StatsPage() {
   const navigate = useNavigate();
   const [stats, setStats] = useState<StatsSummary | null>(null);
   const [days, setDays] = useState(30);
 
   useEffect(() => {
-    useReaderStore.getState().getStats(days).then(setStats);
+    let cancelled = false;
+
+    useReaderStore
+      .getState()
+      .getStats(days)
+      .then((next) => {
+        if (!cancelled) {
+          setStats(next);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to load reading stats:", err);
+        if (!cancelled) {
+          setStats(EMPTY_STATS);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [days]);
 
   if (!stats) {
