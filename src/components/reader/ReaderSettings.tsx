@@ -27,9 +27,7 @@ export function ReaderSettings() {
       <div className="flex-1 space-y-5 overflow-auto p-4">
         {/* Font size */}
         <div>
-          <label className="mb-2 block text-xs font-medium text-muted-foreground">
-            字号
-          </label>
+          <label className="mb-2 block text-xs font-medium text-muted-foreground">字号</label>
           <div className="flex flex-wrap gap-1.5">
             {FONT_SIZES.map((size) => (
               <button
@@ -49,9 +47,7 @@ export function ReaderSettings() {
 
         {/* Line height */}
         <div>
-          <label className="mb-2 block text-xs font-medium text-muted-foreground">
-            行高
-          </label>
+          <label className="mb-2 block text-xs font-medium text-muted-foreground">行高</label>
           <div className="flex flex-wrap gap-1.5">
             {LINE_HEIGHTS.map((lh) => (
               <button
@@ -71,9 +67,7 @@ export function ReaderSettings() {
 
         {/* Theme */}
         <div>
-          <label className="mb-2 block text-xs font-medium text-muted-foreground">
-            主题
-          </label>
+          <label className="mb-2 block text-xs font-medium text-muted-foreground">主题</label>
           <div className="flex gap-2">
             {THEMES.map(({ key, label, icon: Icon }) => (
               <button
@@ -94,9 +88,7 @@ export function ReaderSettings() {
 
         {/* Scroll mode */}
         <div>
-          <label className="mb-2 block text-xs font-medium text-muted-foreground">
-            阅读模式
-          </label>
+          <label className="mb-2 block text-xs font-medium text-muted-foreground">阅读模式</label>
           <div className="flex gap-2">
             <button
               onClick={() => updateSettings({ scrollMode: "scroll" })}

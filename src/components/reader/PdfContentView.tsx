@@ -106,9 +106,7 @@ export function PdfContentView({ filePath }: PdfContentViewProps) {
         <Button variant="ghost" size="icon" onClick={zoomOut}>
           <ZoomOut className="h-4 w-4" />
         </Button>
-        <span className="text-xs text-muted-foreground">
-          {Math.round(scale * 100)}%
-        </span>
+        <span className="text-xs text-muted-foreground">{Math.round(scale * 100)}%</span>
         <Button variant="ghost" size="icon" onClick={zoomIn}>
           <ZoomIn className="h-4 w-4" />
         </Button>

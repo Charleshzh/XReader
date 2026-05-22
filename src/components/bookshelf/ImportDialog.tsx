@@ -34,9 +34,7 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
     if (!selected) return;
 
     // selected is string[] | null when multiple: true
-    const files: string[] = Array.isArray(selected)
-      ? selected
-      : [selected as unknown as string];
+    const files: string[] = Array.isArray(selected) ? selected : [selected as unknown as string];
     setImporting(true);
 
     for (const filePath of files) {
@@ -80,11 +78,7 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
         )}
 
         <div className="flex justify-end gap-3">
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={importing}
-          >
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={importing}>
             取消
           </Button>
           <Button onClick={handleImport} disabled={importing}>

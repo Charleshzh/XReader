@@ -25,9 +25,7 @@ export function ChapterTOC() {
               toggleToc();
             }}
             className={`w-full px-4 py-2.5 text-left text-sm transition-colors hover:bg-accent ${
-              ch.index === currentChapter
-                ? "bg-accent font-medium text-primary"
-                : "text-foreground"
+              ch.index === currentChapter ? "bg-accent font-medium text-primary" : "text-foreground"
             }`}
           >
             <span className="line-clamp-1">{ch.title}</span>

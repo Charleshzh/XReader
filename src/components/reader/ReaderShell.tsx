@@ -1,13 +1,7 @@
 import { type ReactNode, useCallback, useEffect } from "react";
 import { useReaderStore } from "@/stores/readerStore";
 import { Button } from "@/components/ui/button";
-import {
-  ArrowLeft,
-  ChevronLeft,
-  ChevronRight,
-  List,
-  Settings,
-} from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, List, Settings } from "lucide-react";
 
 interface ReaderShellProps {
   title: string;
@@ -16,12 +10,7 @@ interface ReaderShellProps {
   children: ReactNode;
 }
 
-export function ReaderShell({
-  title,
-  chapterTitle,
-  onBack,
-  children,
-}: ReaderShellProps) {
+export function ReaderShell({ title, chapterTitle, onBack, children }: ReaderShellProps) {
   const {
     currentChapter,
     chapters,
@@ -71,11 +60,7 @@ export function ReaderShell({
         </Button>
         <div className="flex-1 truncate px-3 text-center text-sm">
           <span className="font-medium">{title}</span>
-          {chapterTitle && (
-            <span className="ml-2 text-muted-foreground">
-              · {chapterTitle}
-            </span>
-          )}
+          {chapterTitle && <span className="ml-2 text-muted-foreground">· {chapterTitle}</span>}
         </div>
         <div className="flex items-center gap-1">
           <Button variant="ghost" size="icon" onClick={toggleToc}>
@@ -92,12 +77,7 @@ export function ReaderShell({
 
       {/* Bottom bar */}
       <footer className="flex h-10 shrink-0 items-center justify-between border-t border-border/50 px-4 text-xs text-muted-foreground">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={prevChapter}
-          disabled={currentChapter === 0}
-        >
+        <Button variant="ghost" size="sm" onClick={prevChapter} disabled={currentChapter === 0}>
           <ChevronLeft className="mr-1 h-3 w-3" />
           上一章
         </Button>

@@ -36,9 +36,7 @@ const formatColor = (format: string) => {
 };
 
 export function BookCard({ book, onDelete, onOpen }: BookCardProps) {
-  const coverSrc = book.cover_path
-    ? convertFileSrc(book.cover_path)
-    : null;
+  const coverSrc = book.cover_path ? convertFileSrc(book.cover_path) : null;
 
   return (
     <div
@@ -48,11 +46,7 @@ export function BookCard({ book, onDelete, onOpen }: BookCardProps) {
       {/* Cover or placeholder */}
       <div className="mb-3 aspect-[3/4] w-full overflow-hidden rounded-md bg-muted">
         {coverSrc ? (
-          <img
-            src={coverSrc}
-            alt={book.title}
-            className="h-full w-full object-cover"
-          />
+          <img src={coverSrc} alt={book.title} className="h-full w-full object-cover" />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-slate-200 to-slate-300 dark:from-slate-700 dark:to-slate-800">
             <span className="text-center text-sm font-medium text-muted-foreground p-2 line-clamp-4">
@@ -63,15 +57,11 @@ export function BookCard({ book, onDelete, onOpen }: BookCardProps) {
       </div>
 
       {/* Title */}
-      <h3 className="mb-1 line-clamp-2 text-sm font-semibold leading-tight">
-        {book.title}
-      </h3>
+      <h3 className="mb-1 line-clamp-2 text-sm font-semibold leading-tight">{book.title}</h3>
 
       {/* Author */}
       {book.author && (
-        <p className="mb-2 line-clamp-1 text-xs text-muted-foreground">
-          {book.author}
-        </p>
+        <p className="mb-2 line-clamp-1 text-xs text-muted-foreground">{book.author}</p>
       )}
 
       {/* Format badge + chapters */}

@@ -64,10 +64,9 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
     set({ book, loading: true, currentChapter: 0 });
     try {
       // Load chapters from Tauri backend
-      const chaptersRaw = await invoke<{ index: number; title: string }[]>(
-        "get_chapters",
-        { bookId: book.id },
-      );
+      const chaptersRaw = await invoke<{ index: number; title: string }[]>("get_chapters", {
+        bookId: book.id,
+      });
       const chapters: ChapterInfo[] = chaptersRaw.map((c) => ({
         index: c.index,
         title: c.title || `第${c.index + 1}章`,
@@ -133,6 +132,5 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
   },
 
   toggleToc: () => set((s) => ({ tocOpen: !s.tocOpen, settingsOpen: false })),
-  toggleSettings: () =>
-    set((s) => ({ settingsOpen: !s.settingsOpen, tocOpen: false })),
+  toggleSettings: () => set((s) => ({ settingsOpen: !s.settingsOpen, tocOpen: false })),
 }));

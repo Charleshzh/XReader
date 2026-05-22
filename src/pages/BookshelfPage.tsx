@@ -8,13 +8,11 @@ import { Button } from "@/components/ui/button";
 import type { BookItem } from "@/types/book";
 
 export function BookshelfPage() {
-  const { books, loading, viewMode, loadBooks, deleteBook, setViewMode } =
-    useBookStore();
+  const { books, loading, viewMode, loadBooks, deleteBook, setViewMode } = useBookStore();
   const [showImport, setShowImport] = useState(false);
   const [search, setSearch] = useState("");
 
   const navigate = useNavigate();
-
 
   useEffect(() => {
     loadBooks();
@@ -60,9 +58,7 @@ export function BookshelfPage() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() =>
-              setViewMode(viewMode === "grid" ? "list" : "grid")
-            }
+            onClick={() => setViewMode(viewMode === "grid" ? "list" : "grid")}
           >
             {viewMode === "grid" ? (
               <List className="h-4 w-4" />
@@ -91,9 +87,7 @@ export function BookshelfPage() {
               <>
                 <BookIcon className="h-16 w-16 text-muted-foreground/50" />
                 <p className="text-lg text-muted-foreground">书架为空</p>
-                <p className="text-sm text-muted-foreground">
-                  点击"导入"按钮添加本地书籍
-                </p>
+                <p className="text-sm text-muted-foreground">点击"导入"按钮添加本地书籍</p>
                 <Button onClick={() => setShowImport(true)}>
                   <Plus className="mr-1 h-4 w-4" />
                   导入第一本书
@@ -106,12 +100,7 @@ export function BookshelfPage() {
         ) : viewMode === "grid" ? (
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
             {filtered.map((book) => (
-              <BookCard
-                key={book.id}
-                book={book}
-                onDelete={deleteBook}
-                onOpen={handleOpen}
-              />
+              <BookCard key={book.id} book={book} onDelete={deleteBook} onOpen={handleOpen} />
             ))}
           </div>
         ) : (
@@ -127,11 +116,7 @@ export function BookshelfPage() {
                 </div>
                 <div className="flex-1">
                   <p className="font-medium">{book.title}</p>
-                  {book.author && (
-                    <p className="text-sm text-muted-foreground">
-                      {book.author}
-                    </p>
-                  )}
+                  {book.author && <p className="text-sm text-muted-foreground">{book.author}</p>}
                 </div>
                 <Button
                   variant="ghost"
