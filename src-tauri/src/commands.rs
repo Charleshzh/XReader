@@ -212,6 +212,12 @@ pub fn save_progress(
     chapter_index: i64,
     position: f64,
 ) -> Result<(), String> {
+    if book_id.is_empty() {
+        return Err("book_id must not be empty".to_string());
+    }
+    if !position.is_finite() || !(0.0..=1.0).contains(&position) {
+        return Err(format!("Invalid position: {}", position));
+    }
     let db = state.db.lock().map_err(|e| e.to_string())?;
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -248,6 +254,12 @@ pub fn add_bookmark(
     position: f64,
     label: String,
 ) -> Result<BookmarkItem, String> {
+    if book_id.is_empty() {
+        return Err("book_id must not be empty".to_string());
+    }
+    if !position.is_finite() || !(0.0..=1.0).contains(&position) {
+        return Err(format!("Invalid position: {}", position));
+    }
     let db = state.db.lock().map_err(|e| e.to_string())?;
     let id = uuid::Uuid::new_v4().to_string();
     let now = std::time::SystemTime::now()
@@ -785,7 +797,46 @@ pub fn load_reader_settings(state: State<AppState>) -> Result<String, String> {
 
 // ── File Write (for export) ──
 
+const MAX_EXPORT_SIZE: usize = 10 * 1024 * 1024; // 10 MB
+
 #[tauri::command]
-pub fn write_file(path: String, content: String) -> Result<(), String> {
-    std::fs::write(&path, content).map_err(|e| format!("Failed to write file: {}", e))
+#[allow(unused_variables)]
+pub fn write_file(state: State<AppState>, path: String, content: String) -> Result<(), String> {
+    if content.len() > MAX_EXPORT_SIZE {
+        return Err(format!(
+            "Export content too large: {} bytes (max {})",
+            content.len(),
+            MAX_EXPORT_SIZE
+        ));
+    }
+
+    // Canonicalize parent to prevent path traversal (file may not exist yet)
+    let path_buf = std::path::Path::new(&path).to_path_buf();
+    let parent = path_buf
+        .parent()
+        .ok_or_else(|| "Invalid path: no parent directory".to_string())?;
+    let filename = path_buf
+        .file_name()
+        .ok_or_else(|| "Invalid path: no filename".to_string())?
+        .to_string_lossy()
+        .to_string();
+
+    let resolved_parent =
+        std::fs::canonicalize(parent).map_err(|e| format!("Cannot access directory: {}", e))?;
+
+    // Restrict to common export directories
+    let allowed_str = resolved_parent.to_string_lossy().to_lowercase();
+    let is_allowed = allowed_str.contains("\\documents")
+        || allowed_str.contains("/documents")
+        || allowed_str.contains("\\downloads")
+        || allowed_str.contains("/downloads")
+        || allowed_str.contains("\\desktop")
+        || allowed_str.contains("/desktop");
+
+    if !is_allowed {
+        return Err("Export path must be within Documents, Downloads, or Desktop".to_string());
+    }
+
+    let resolved = resolved_parent.join(&filename);
+    std::fs::write(&resolved, content).map_err(|e| format!("Failed to write file: {}", e))
 }

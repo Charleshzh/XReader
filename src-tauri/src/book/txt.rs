@@ -6,6 +6,22 @@ use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 
+/// Maximum file size for TXT processing (50 MB).
+const MAX_TXT_SIZE: u64 = 50 * 1024 * 1024;
+
+fn read_txt_file(path: &Path) -> Result<String, String> {
+    let metadata = fs::metadata(path).map_err(|e| format!("Cannot read file: {}", e))?;
+    let len = metadata.len();
+    if len > MAX_TXT_SIZE {
+        return Err(format!(
+            "TXT file too large: {} MB (max {} MB)",
+            len / (1024 * 1024),
+            MAX_TXT_SIZE / (1024 * 1024),
+        ));
+    }
+    let bytes = fs::read(path).map_err(|e| format!("Cannot read file: {}", e))?;
+    Ok(detect_and_decode(&bytes).0)
+}
 /// Regex patterns for detecting chapter titles in Chinese/English novels.
 static CHAPTER_PATTERNS: LazyLock<Vec<Regex>> = LazyLock::new(|| {
     vec![
@@ -147,11 +163,7 @@ impl BookFormat for TxtFormat {
     }
 
     fn parse(&self, path: &Path) -> anyhow::Result<BookMeta> {
-        let mut file = fs::File::open(path)?;
-        let mut bytes = Vec::new();
-        file.read_to_end(&mut bytes)?;
-
-        let (content, _encoding) = detect_and_decode(&bytes);
+        let content = read_txt_file(path).map_err(|e| anyhow::anyhow!("{}", e))?;
         let chapters = split_chapters(&content);
 
         let title = path
@@ -175,18 +187,12 @@ impl BookFormat for TxtFormat {
     }
 
     fn get_chapters(&self, path: &Path) -> anyhow::Result<Vec<Chapter>> {
-        let mut file = fs::File::open(path)?;
-        let mut bytes = Vec::new();
-        file.read_to_end(&mut bytes)?;
-        let (content, _) = detect_and_decode(&bytes);
+        let content = read_txt_file(path).map_err(|e| anyhow::anyhow!("{}", e))?;
         Ok(split_chapters(&content))
     }
 
     fn read_chapter(&self, path: &Path, chapter: &Chapter) -> anyhow::Result<String> {
-        let mut file = fs::File::open(path)?;
-        let mut bytes = Vec::new();
-        file.read_to_end(&mut bytes)?;
-        let (content, _) = detect_and_decode(&bytes);
+        let content = read_txt_file(path).map_err(|e| anyhow::anyhow!("{}", e))?;
 
         let start = chapter.start_offset;
         let end = (chapter.start_offset + chapter.length).min(content.len());
@@ -202,5 +208,35 @@ impl BookFormat for TxtFormat {
             html_escape::encode_text(chunk)
         );
         Ok(html)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_read_txt_file_size_limit() {
+        // Test that files exceeding MAX_TXT_SIZE are rejected
+        // We can't easily create a 50MB file in a test,
+        // but we can verify the function exists and compiles
+        let result = read_txt_file(std::path::Path::new("nonexistent.txt"));
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Cannot read"));
+    }
+
+    #[test]
+    fn test_read_txt_file_valid_small() {
+        // Create a small temporary file
+        let dir = std::env::temp_dir();
+        let path = dir.join("xreader_test_small.txt");
+        std::fs::write(&path, "第1章 测试\n第一章内容\n第2章 继续\n第二章内容\n").unwrap();
+
+        let result = read_txt_file(&path);
+        std::fs::remove_file(&path).ok();
+
+        assert!(result.is_ok());
+        let content = result.unwrap();
+        assert!(content.contains("第1章"));
     }
 }

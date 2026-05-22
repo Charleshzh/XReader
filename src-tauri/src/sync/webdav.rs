@@ -16,7 +16,10 @@ impl WebDavBackend {
         let client = reqwest::Client::builder()
             .timeout(Duration::from_secs(30))
             .build()
-            .expect("Failed to build HTTP client for WebDAV");
+            .unwrap_or_else(|e| {
+                log::error!("Failed to build HTTP client for WebDAV: {}", e);
+                reqwest::Client::new()
+            });
 
         Self {
             url: url.trim_end_matches('/').to_string(),
@@ -69,6 +72,12 @@ impl SyncBackend for WebDavBackend {
             .map_err(|e| format!("WebDAV download error: {}", e))?;
 
         if resp.status().is_success() {
+            // Check Content-Length to prevent memory exhaustion
+            if let Some(cl) = resp.content_length() {
+                if cl > 50 * 1024 * 1024 {
+                    return Err(format!("Remote file too large: {} MB", cl / (1024 * 1024)));
+                }
+            }
             resp.bytes()
                 .await
                 .map(|b| b.to_vec())

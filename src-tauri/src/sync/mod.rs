@@ -211,6 +211,9 @@ fn merge_row(db: &Connection, table: &str, row: &Value) -> Result<(), String> {
     match table {
         "books" => {
             let id = row["id"].as_str().unwrap_or("");
+            if id.is_empty() {
+                return Ok(());
+            }
             let remote_updated = row["updated_at"].as_i64().unwrap_or(0);
 
             let local_updated: Option<i64> = db
@@ -346,4 +349,141 @@ fn merge_row(db: &Connection, table: &str, row: &Value) -> Result<(), String> {
         _ => {}
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rusqlite::Connection;
+    use serde_json::json;
+
+    fn test_db() -> Connection {
+        let db = Connection::open_in_memory().unwrap();
+        db.execute_batch(
+            "CREATE TABLE IF NOT EXISTS books (
+                id TEXT PRIMARY KEY, title TEXT, author TEXT,
+                format TEXT, updated_at INTEGER DEFAULT 0
+            );
+            CREATE TABLE IF NOT EXISTS reading_progress (
+                book_id TEXT PRIMARY KEY, chapter_index INTEGER,
+                position REAL, updated_at INTEGER DEFAULT 0
+            );
+            CREATE TABLE IF NOT EXISTS bookmarks (
+                id TEXT PRIMARY KEY, book_id TEXT, chapter_index INTEGER,
+                position REAL, label TEXT, created_at INTEGER DEFAULT 0
+            );
+            CREATE TABLE IF NOT EXISTS annotations (
+                id TEXT PRIMARY KEY, book_id TEXT, text TEXT,
+                note TEXT, updated_at INTEGER DEFAULT 0
+            );
+            CREATE TABLE IF NOT EXISTS book_sources (
+                id TEXT PRIMARY KEY, name TEXT,
+                base_url TEXT, updated_at INTEGER DEFAULT 0
+            );
+            CREATE TABLE IF NOT EXISTS sync_meta (
+                table_name TEXT PRIMARY KEY, last_synced_at INTEGER DEFAULT 0
+            );",
+        )
+        .unwrap();
+        db
+    }
+
+    #[test]
+    fn test_merge_row_rejects_empty_id() {
+        let db = test_db();
+        let row =
+            json!({"id": "", "title": "Test", "author": "", "format": "txt", "updated_at": 1000});
+        let result = merge_row(&db, "books", &row);
+        assert!(result.is_ok());
+        // Should not insert — ID was empty
+        let count: i64 = db
+            .query_row("SELECT COUNT(*) FROM books", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(count, 0);
+    }
+
+    #[test]
+    fn test_merge_row_inserts_valid_book() {
+        let db = test_db();
+        let row = json!({"id": "book-1", "title": "My Book", "author": "Author", "format": "epub", "updated_at": 2000});
+        merge_row(&db, "books", &row).unwrap();
+        let count: i64 = db
+            .query_row("SELECT COUNT(*) FROM books", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(count, 1);
+    }
+
+    #[test]
+    fn test_merge_row_respects_newer_local() {
+        let db = test_db();
+        db.execute(
+            "INSERT INTO books (id, title, updated_at) VALUES ('book-1', 'Old Title', 5000)",
+            [],
+        )
+        .unwrap();
+
+        let row = json!({"id": "book-1", "title": "Newer Remote?", "author": "", "format": "epub", "updated_at": 3000});
+        merge_row(&db, "books", &row).unwrap();
+
+        let title: String = db
+            .query_row("SELECT title FROM books WHERE id = 'book-1'", [], |r| {
+                r.get(0)
+            })
+            .unwrap();
+        // Local is newer (5000 > 3000), so title should NOT be overwritten
+        assert_eq!(title, "Old Title");
+    }
+
+    #[test]
+    fn test_merge_row_applies_newer_remote() {
+        let db = test_db();
+        db.execute(
+            "INSERT INTO books (id, title, updated_at) VALUES ('book-1', 'Old', 1000)",
+            [],
+        )
+        .unwrap();
+
+        let row = json!({"id": "book-1", "title": "Updated", "author": "", "format": "epub", "updated_at": 3000});
+        merge_row(&db, "books", &row).unwrap();
+
+        let title: String = db
+            .query_row("SELECT title FROM books WHERE id = 'book-1'", [], |r| {
+                r.get(0)
+            })
+            .unwrap();
+        assert_eq!(title, "Updated");
+    }
+
+    #[test]
+    fn test_merge_row_reading_progress() {
+        let db = test_db();
+        let row =
+            json!({"book_id": "b1", "chapter_index": 5, "position": 0.75, "updated_at": 2000});
+        merge_row(&db, "reading_progress", &row).unwrap();
+
+        let idx: i64 = db
+            .query_row(
+                "SELECT chapter_index FROM reading_progress WHERE book_id = 'b1'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(idx, 5);
+    }
+
+    #[test]
+    fn test_merge_row_bookmarks_avoids_duplicates() {
+        let db = test_db();
+        let row = json!({"id": "bm-1", "book_id": "b1", "chapter_index": 3, "position": 0.5, "label": "test", "created_at": 1000});
+        merge_row(&db, "bookmarks", &row).unwrap();
+
+        // Try again with same ID
+        let row2 = json!({"id": "bm-1", "book_id": "b1", "chapter_index": 3, "position": 0.5, "label": "test2", "created_at": 2000});
+        merge_row(&db, "bookmarks", &row2).unwrap();
+
+        let count: i64 = db
+            .query_row("SELECT COUNT(*) FROM bookmarks", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(count, 1);
+    }
 }
