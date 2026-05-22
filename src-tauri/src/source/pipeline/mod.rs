@@ -1,6 +1,5 @@
 //! SourcePipeline — orchestrates HTTP fetching + rule evaluation for 4 operations.
 
-use crate::source::compiler::compile_source;
 use crate::source::evaluator::{self, EvalContext};
 use crate::source::http::SourceHttpClient;
 use crate::source::types::*;
@@ -12,7 +11,6 @@ pub mod chapter_content;
 pub mod chapter_list;
 pub mod search;
 
-/// A compiled book source ready for executing pipelines.
 pub struct SourcePipeline {
     pub source: CompiledSource,
     http: SourceHttpClient,
@@ -21,9 +19,10 @@ pub struct SourcePipeline {
 
 impl SourcePipeline {
     pub fn new(source: CompiledSource) -> Self {
-        // Set base URL in context for template resolution
-        let mut ctx = EvalContext::default();
-        ctx.base_url = Some(source.base_url.clone());
+        let ctx = EvalContext {
+            base_url: Some(source.base_url.clone()),
+            ..Default::default()
+        };
 
         Self {
             source,
@@ -32,7 +31,6 @@ impl SourcePipeline {
         }
     }
 
-    /// Fetch a URL and parse it as HTML.
     pub async fn fetch_html(&self, url: &str) -> Result<Html, String> {
         let html_str = self
             .http
@@ -51,7 +49,6 @@ impl SourcePipeline {
         Ok(Html::parse_document(&html_str))
     }
 
-    /// Get the search URL with keyword and page substituted.
     pub fn search_url(&self, keyword: &str, page: u32) -> String {
         evaluator::template::substitute_url(
             &self.source.search_url,
@@ -61,7 +58,6 @@ impl SourcePipeline {
         )
     }
 
-    /// Set a context variable (used for cross-step data passing).
     pub fn set_var(&mut self, key: &str, value: &str) {
         self.context
             .variables

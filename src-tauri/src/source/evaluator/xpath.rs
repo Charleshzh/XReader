@@ -85,7 +85,7 @@ fn xpath_value_to_result(value: &Value, attr: &str) -> EvalResult {
                     }
                 }
                 _ => {
-                    if let Some(node) = ordered.iter().next() {
+                    if let Some(node) = ordered.first() {
                         if let Some(el) = node.element() {
                             if let Some(av) = el.attribute(attr) {
                                 let val = av.value().trim().to_string();

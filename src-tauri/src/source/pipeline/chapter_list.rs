@@ -52,9 +52,7 @@ impl SourcePipeline {
 
     /// Check if there's a next TOC page.
     pub async fn get_next_toc_url(&mut self, toc_url: &str) -> Option<String> {
-        if self.source.toc_next_url.is_none() {
-            return None;
-        }
+        let _ = self.source.toc_next_url.as_ref()?;
 
         let html = self.fetch_html(toc_url).await.ok()?;
         let next = eval_field(&html, self.source.toc_next_url.as_ref().unwrap());

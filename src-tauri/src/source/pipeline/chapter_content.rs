@@ -29,11 +29,8 @@ impl SourcePipeline {
         Ok(cleaned)
     }
 
-    /// Check if there's a next chapter URL.
     pub async fn get_next_chapter_url(&mut self, chapter_url: &str) -> Option<String> {
-        if self.source.content_next_url.is_none() {
-            return None;
-        }
+        let _ = self.source.content_next_url.as_ref()?;
 
         let html = self.fetch_html(chapter_url).await.ok()?;
         let next = evaluator::evaluate_rule(

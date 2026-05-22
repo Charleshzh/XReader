@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 #![allow(unused_imports)]
+#![allow(clippy::manual_strip, clippy::redundant_closure, clippy::unnecessary_unwrap, clippy::len_zero, clippy::iter_next_slice, clippy::field_reassign_with_default, clippy::question_mark)]
 
 mod book;
 mod commands;
