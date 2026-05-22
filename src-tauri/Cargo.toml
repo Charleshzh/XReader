@@ -53,3 +53,7 @@ log = "0.4.29"
 tauri-plugin-updater = "2.10.1"
 ring = "0.17"
 hostname = "0.4"
+
+[dev-dependencies]
+tempfile = "3.16.0"
+zip = { version = "2.2.2", default-features = false, features = ["deflate"] }

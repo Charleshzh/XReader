@@ -217,9 +217,6 @@ mod tests {
 
     #[test]
     fn test_read_txt_file_size_limit() {
-        // Test that files exceeding MAX_TXT_SIZE are rejected
-        // We can't easily create a 50MB file in a test,
-        // but we can verify the function exists and compiles
         let result = read_txt_file(std::path::Path::new("nonexistent.txt"));
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("Cannot read"));
@@ -227,7 +224,6 @@ mod tests {
 
     #[test]
     fn test_read_txt_file_valid_small() {
-        // Create a small temporary file
         let dir = std::env::temp_dir();
         let path = dir.join("xreader_test_small.txt");
         std::fs::write(&path, "第1章 测试\n第一章内容\n第2章 继续\n第二章内容\n").unwrap();
@@ -238,5 +234,19 @@ mod tests {
         assert!(result.is_ok());
         let content = result.unwrap();
         assert!(content.contains("第1章"));
+    }
+
+    #[test]
+    fn test_split_chapters_falls_back_to_single_chapter() {
+        let chapters = split_chapters("这是一整章没有标题的正文");
+        assert_eq!(chapters.len(), 1);
+        assert_eq!(chapters[0].title, "正文");
+    }
+
+    #[test]
+    fn test_detect_and_decode_prefers_valid_utf8() {
+        let (decoded, encoding) = detect_and_decode("第一章 正文".as_bytes());
+        assert_eq!(decoded, "第一章 正文");
+        assert!(encoding.eq_ignore_ascii_case("utf-8"));
     }
 }
