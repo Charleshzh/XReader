@@ -6,6 +6,7 @@ import { StylePresetList } from "@/components/reader/StylePresetList";
 import { ReaderTypographyPanel } from "@/components/reader/ReaderTypographyPanel";
 import { ReaderChromePanel } from "@/components/reader/ReaderChromePanel";
 import { TapZoneConfigPanel } from "@/components/reader/TapZoneConfigPanel";
+import { ReaderBundleButtons } from "@/components/reader/ReaderBundleButtons";
 
 const CHINESE_MODE_OPTIONS: { value: ChineseMode; label: string }[] = [
   { value: "original", label: "原文" },
@@ -98,6 +99,7 @@ export function ReaderSettings() {
 
         <ReaderChromePanel />
         <TapZoneConfigPanel />
+        <ReaderBundleButtons />
       </div>
     </div>
   );
