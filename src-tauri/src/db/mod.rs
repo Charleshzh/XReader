@@ -60,7 +60,14 @@ const REQUIRED_INITIAL_SCHEMA: &[(&str, &[&str])] = &[
     ),
     (
         "bookmarks",
-        &["id", "book_id", "chapter_index", "position", "label", "created_at"],
+        &[
+            "id",
+            "book_id",
+            "chapter_index",
+            "position",
+            "label",
+            "created_at",
+        ],
     ),
     (
         "annotations",
@@ -153,9 +160,7 @@ fn repair_initial_schema_checksum(
         params![current.checksum().to_string(), INITIAL_SCHEMA_VERSION],
     )?;
 
-    log::warn!(
-        "Repaired V1 migration checksum drift after validating current schema"
-    );
+    log::warn!("Repaired V1 migration checksum drift after validating current schema");
 
     Ok(true)
 }
@@ -255,7 +260,12 @@ mod tests {
         conn.execute(
             "INSERT INTO refinery_schema_history (version, name, applied_on, checksum)
              VALUES (?1, ?2, ?3, ?4)",
-            params![INITIAL_SCHEMA_VERSION, INITIAL_SCHEMA_NAME, "2026-05-22T00:00:00Z", "0"],
+            params![
+                INITIAL_SCHEMA_VERSION,
+                INITIAL_SCHEMA_NAME,
+                "2026-05-22T00:00:00Z",
+                "0"
+            ],
         )?;
         Ok(())
     }

@@ -402,7 +402,7 @@ pub async fn add_remote_book(
         author: info.author,
         cover_path: info.cover_url,
         format: "remote".into(),
-        total_chapters: total_chapters,
+        total_chapters,
         message: "Successfully imported remote book".into(),
     })
 }
