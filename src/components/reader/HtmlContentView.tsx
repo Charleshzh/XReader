@@ -1,185 +1,193 @@
-import { useRef, useEffect, useCallback, useMemo } from "react";
+import { useRef, useEffect, useCallback, useMemo, useState } from "react";
+import { convertChinese } from "@/lib/chinese";
+import { findContentMatches, highlightSearchMatches } from "@/lib/contentSearch";
+import { highlightAnnotations } from "@/lib/highlight";
+import { pageIndexFromFraction } from "@/lib/paginatedLayout";
+import { resolveTapZone } from "@/lib/tapZones";
 import { useReaderStore } from "@/stores/readerStore";
 
 interface HtmlContentViewProps {
   content: string;
 }
 
-/** Wrap annotation text ranges with <mark> tags for visual highlighting. */
-function highlightAnnotations(
-  html: string,
-  annotations: { text: string; color: string }[],
-): string {
-  if (annotations.length === 0) return html;
-
-  // Extract plain text from HTML to locate annotation positions
-  const stripHtml = (s: string) => s.replace(/<[^>]*>/g, "");
-  const plainText = stripHtml(html);
-
-  // Collect annotation matches: each maps to a plain-text span
-  interface Span {
-    start: number;
-    end: number;
-    color: string;
-  }
-  const spans: Span[] = [];
-  for (const ann of annotations) {
-    if (!ann.text.trim()) continue;
-    let idx = 0;
-    // Find all occurrences of annotation text in plain text
-    while (idx < plainText.length) {
-      const found = plainText.indexOf(ann.text, idx);
-      if (found === -1) break;
-      // Avoid overlapping spans (simple check)
-      const overlap = spans.some((s) => found < s.end && found + ann.text.length > s.start);
-      if (!overlap) {
-        spans.push({
-          start: found,
-          end: found + ann.text.length,
-          color: ann.color,
-        });
-      }
-      idx = found + ann.text.length;
-    }
-  }
-
-  if (spans.length === 0) return html;
-
-  // Sort spans by start position
-  spans.sort((a, b) => a.start - b.start);
-
-  // Build highlighted HTML by walking through plain text positions
-  let result = "";
-  let htmlPos = 0;
-  let plainPos = 0;
-
-  for (const span of spans) {
-    // Copy HTML characters up to span start
-    while (plainPos < span.start && htmlPos < html.length) {
-      const ch = html[htmlPos];
-      result += ch;
-      htmlPos++;
-      if (ch === "<") {
-        // Skip tag: copy until >
-        while (htmlPos < html.length && html[htmlPos] !== ">") {
-          result += html[htmlPos];
-          htmlPos++;
-        }
-        if (htmlPos < html.length) {
-          result += html[htmlPos]; // the >
-          htmlPos++;
-        }
-      } else {
-        plainPos++;
-      }
-    }
-
-    // Insert mark tag
-    const colorClass = COLOR_MAP[span.color] || "bg-yellow-200 dark:bg-yellow-800";
-    result += `<mark class="${colorClass} bg-opacity-40 dark:bg-opacity-40 rounded-sm">`;
-
-    // Copy HTML characters for the span
-    let spanPlain = 0;
-    while (spanPlain < span.end - span.start && htmlPos < html.length) {
-      const ch = html[htmlPos];
-      result += ch;
-      htmlPos++;
-      if (ch === "<") {
-        while (htmlPos < html.length && html[htmlPos] !== ">") {
-          result += html[htmlPos];
-          htmlPos++;
-        }
-        if (htmlPos < html.length) {
-          result += html[htmlPos];
-          htmlPos++;
-        }
-      } else {
-        plainPos++;
-        spanPlain++;
-      }
-    }
-
-    result += "</mark>";
-  }
-
-  // Copy remaining HTML
-  result += html.slice(htmlPos);
-
-  return result;
-}
-
-const COLOR_MAP: Record<string, string> = {
-  yellow: "bg-yellow-200 dark:bg-yellow-800",
-  green: "bg-green-200 dark:bg-green-800",
-  blue: "bg-blue-200 dark:bg-blue-800",
-  pink: "bg-pink-200 dark:bg-pink-800",
-  orange: "bg-orange-200 dark:bg-orange-800",
-};
-
 export function HtmlContentView({ content }: HtmlContentViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const { settings, annotations, currentChapter, saveProgress, nextChapter, prevChapter } =
-    useReaderStore();
+  const articleRef = useRef<HTMLElement>(null);
+  const [pageWidth, setPageWidth] = useState(0);
+  const {
+    settingsState,
+    activeStyle,
+    annotations,
+    currentChapter,
+    currentPosition,
+    currentPage,
+    saveProgress,
+    dispatchTapAction,
+    searchQuery,
+    searchMatches,
+    currentSearchIndex,
+    setSearchMatches,
+  } = useReaderStore();
 
-  // Filter annotations for current chapter
   const chapterAnnotations = useMemo(
     () =>
       annotations
-        .filter((a) => a.chapter_index === currentChapter)
-        .map((a) => ({ text: a.text, color: a.color })),
+        .filter((annotation) => annotation.chapter_index === currentChapter)
+        .map((annotation) => ({ text: annotation.text, color: annotation.color })),
     [annotations, currentChapter],
   );
 
-  // Highlighted content
-  const highlightedContent = useMemo(
-    () => highlightAnnotations(content, chapterAnnotations),
-    [content, chapterAnnotations],
+  const convertedContent = useMemo(
+    () => convertChinese(settingsState.assist.chineseMode, content),
+    [content, settingsState.assist.chineseMode],
   );
 
-  const { fontSize, lineHeight, marginH, marginV, scrollMode, fontFamily } = settings;
+  const highlightedContent = useMemo(() => {
+    const withAnnotations = highlightAnnotations(convertedContent, chapterAnnotations);
+    return highlightSearchMatches(
+      withAnnotations,
+      searchQuery,
+      settingsState.assist.searchCaseSensitive,
+    );
+  }, [chapterAnnotations, convertedContent, searchQuery, settingsState.assist.searchCaseSensitive]);
+
+  const {
+    fontSize,
+    lineHeight,
+    marginH,
+    marginV,
+    fontFamily,
+    fontWeight,
+    letterSpacing,
+    paragraphSpacing,
+    paragraphIndent,
+  } = activeStyle;
+  const isPaginated = settingsState.interaction.scrollMode === "paginated";
 
   const handleScroll = useCallback(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const scrollTop = el.scrollTop;
-    const scrollHeight = el.scrollHeight - el.clientHeight;
+    const element = containerRef.current;
+    if (!element) return;
+    const scrollTop = element.scrollTop;
+    const scrollHeight = element.scrollHeight - element.clientHeight;
     const position = scrollHeight > 0 ? scrollTop / scrollHeight : 0;
-    saveProgress(currentChapter, position);
+    void saveProgress(currentChapter, position);
   }, [currentChapter, saveProgress]);
 
   useEffect(() => {
-    if (containerRef.current) {
-      containerRef.current.scrollTop = 0;
-    }
-  }, [content]);
+    setSearchMatches(
+      findContentMatches(convertedContent, searchQuery, settingsState.assist.searchCaseSensitive),
+    );
+  }, [convertedContent, searchQuery, setSearchMatches, settingsState.assist.searchCaseSensitive]);
 
   useEffect(() => {
-    const el = containerRef.current;
-    if (!el || scrollMode !== "scroll") return;
+    const article = articleRef.current;
+    if (!article) return;
+    const paragraphs = article.querySelectorAll("p");
+    paragraphs.forEach((paragraph, index) => {
+      paragraph.style.textIndent = `${paragraphIndent}em`;
+      paragraph.style.marginBottom =
+        index === paragraphs.length - 1 ? "0px" : `${paragraphSpacing}px`;
+    });
+  }, [highlightedContent, paragraphIndent, paragraphSpacing]);
+
+  useEffect(() => {
+    if (searchMatches.length === 0) return;
+    const article = articleRef.current;
+    if (!article) return;
+    const target = article.querySelector(
+      `[data-search-index="${currentSearchIndex}"]`,
+    ) as HTMLElement | null;
+    target?.scrollIntoView({ block: isPaginated ? "nearest" : "center", inline: "center" });
+  }, [currentSearchIndex, highlightedContent, isPaginated, searchMatches.length]);
+
+  useEffect(() => {
+    const element = containerRef.current;
+    if (!element) return;
+    if (isPaginated) {
+      element.scrollTop = 0;
+      return;
+    }
+
+    const maxScrollTop = element.scrollHeight - element.clientHeight;
+    const nextScrollTop = maxScrollTop > 0 ? maxScrollTop * currentPosition : 0;
+    if (Math.abs(element.scrollTop - nextScrollTop) > 2) {
+      element.scrollTop = nextScrollTop;
+    }
+  }, [convertedContent, currentPosition, isPaginated]);
+
+  useEffect(() => {
+    const element = containerRef.current;
+    if (!element || isPaginated) return;
     let timer: ReturnType<typeof setTimeout>;
     const onScroll = () => {
       clearTimeout(timer);
       timer = setTimeout(handleScroll, 500);
     };
-    el.addEventListener("scroll", onScroll, { passive: true });
+    element.addEventListener("scroll", onScroll, { passive: true });
     return () => {
-      el.removeEventListener("scroll", onScroll);
+      element.removeEventListener("scroll", onScroll);
       clearTimeout(timer);
     };
-  }, [handleScroll, scrollMode]);
+  }, [handleScroll, isPaginated]);
+
+  useEffect(() => {
+    const element = containerRef.current;
+    if (!element || !isPaginated) return;
+
+    const updatePageWidth = () => {
+      setPageWidth(element.clientWidth || 0);
+    };
+
+    updatePageWidth();
+    const observer = new ResizeObserver(updatePageWidth);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [highlightedContent, isPaginated]);
+
+  useEffect(() => {
+    if (!isPaginated || pageWidth <= 0) return;
+    const element = containerRef.current;
+    const article = articleRef.current;
+    if (!element || !article) return;
+
+    const frame = window.requestAnimationFrame(() => {
+      const pages = Math.max(1, Math.ceil(article.scrollWidth / pageWidth));
+      const restoredPage = pageIndexFromFraction(currentPosition, pages);
+      const nextLeft = restoredPage * pageWidth;
+      if (Math.abs(element.scrollLeft - nextLeft) > 2) {
+        element.scrollLeft = nextLeft;
+      }
+      const state = useReaderStore.getState();
+      if (state.currentPage !== restoredPage || state.totalPages !== pages) {
+        useReaderStore.setState({ currentPage: restoredPage, totalPages: pages });
+      }
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [highlightedContent, currentPosition, isPaginated, pageWidth]);
+
+  useEffect(() => {
+    if (!isPaginated || pageWidth <= 0) return;
+    const element = containerRef.current;
+    if (!element) return;
+    const desiredLeft = currentPage * pageWidth;
+    if (Math.abs(element.scrollLeft - desiredLeft) > 2) {
+      element.scrollLeft = desiredLeft;
+    }
+  }, [currentPage, isPaginated, pageWidth]);
 
   const handleContentClick = useCallback(
-    (e: React.MouseEvent) => {
-      if (scrollMode !== "paginated") return;
-      const rect = e.currentTarget.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      if (x < rect.width * 0.3) {
-        prevChapter();
-      } else if (x > rect.width * 0.7) {
-        nextChapter();
-      }
+    (event: React.MouseEvent) => {
+      const rect = event.currentTarget.getBoundingClientRect();
+      const zone = resolveTapZone({
+        x: event.clientX - rect.left,
+        y: event.clientY - rect.top,
+        width: rect.width,
+        height: rect.height,
+      });
+      void dispatchTapAction(zone);
     },
-    [scrollMode, prevChapter, nextChapter],
+    [dispatchTapAction],
   );
 
   return (
@@ -187,20 +195,27 @@ export function HtmlContentView({ content }: HtmlContentViewProps) {
       ref={containerRef}
       className="relative h-full select-none"
       style={{
-        overflowY: scrollMode === "scroll" ? "auto" : "hidden",
+        overflowY: isPaginated ? "hidden" : "auto",
         overflowX: "hidden",
       }}
       onClick={handleContentClick}
     >
       <article
+        ref={articleRef}
         className="mx-auto min-h-full max-w-3xl px-[var(--margin-h)] py-[var(--margin-v)]"
         style={
           {
             "--margin-h": `${marginH}%`,
             "--margin-v": `${marginV}px`,
             fontSize: `${fontSize}px`,
-            lineHeight: lineHeight,
-            fontFamily: fontFamily,
+            lineHeight,
+            fontFamily,
+            fontWeight,
+            letterSpacing: `${letterSpacing}px`,
+            columnWidth: isPaginated && pageWidth > 0 ? `${pageWidth}px` : undefined,
+            columnGap: isPaginated ? "0px" : undefined,
+            maxWidth: isPaginated ? "none" : undefined,
+            height: isPaginated ? "100%" : undefined,
           } as React.CSSProperties
         }
         dangerouslySetInnerHTML={{ __html: highlightedContent }}

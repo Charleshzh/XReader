@@ -2,7 +2,7 @@
 
 **日期**: 2026-05-22
 **基准**: `docs/XReader_Novel_Reader_Plan.md` Phase 1-7
-**实际完成**: 31 commits, Phase 1-7 MVP + 高优先级缺口关闭 + Beta 就绪 (59f0cad)
+**实际完成**: Phase 1-7 MVP + 工程硬化基线（63 Rust pass / 7 ignored，12 Vitest，4 Playwright smoke）
 
 ## 1. 各阶段完成度
 
@@ -43,12 +43,12 @@
 
 ### 2.3 低优先级（测试/工具）
 
-| #   | 功能                                    | 所属 Phase | 说明                                     |
-| --- | --------------------------------------- | ---------- | ---------------------------------------- |
-| 9   | Rust 单元测试（book/db/sync 模块）      | Phase 6A   | 当前仅 source 模块有测试（39个）         |
-| 10  | Vitest + React Testing Library 组件测试 | Phase 6A   | 零前端测试                               |
-| 11  | Playwright E2E 冒烟测试                 | Phase 6A   | CI 未包含 E2E 步骤                       |
-| 12  | epub.js 备选方案评估（foliate-js）      | Phase 3    | 未评估（当前方案工作正常但计划要求评估） |
+| #   | 功能                                    | 所属 Phase | 说明                                                       |
+| --- | --------------------------------------- | ---------- | ---------------------------------------------------------- |
+| 9   | Rust 单元测试（db/query 进一步补强）    | Phase 6A   | 已补到 63 pass, 7 ignored；db/query 与真实书源集成仍偏薄   |
+| 10  | Vitest + React Testing Library 组件测试 | Phase 6A   | 已建立 12 条测试；Reader UI 细节和复杂交互仍待补           |
+| 11  | Playwright E2E 冒烟测试                 | Phase 6A   | 已有 4 条关键路由 smoke，CI 阻塞；仍不是完整桌面端到端测试 |
+| 12  | epub.js 备选方案评估（foliate-js）      | Phase 3    | 未评估（当前方案工作正常但计划要求评估）                   |
 
 ---
 
@@ -66,13 +66,13 @@
 
 ## 4. 测试覆盖
 
-| 层级          | 计划         | 实际                                 | 差距                         |
-| ------------- | ------------ | ------------------------------------ | ---------------------------- |
-| Rust 单元测试 | 所有模块     | 仅 source 模块（39 pass, 8 ignored） | book/db/sync/commands 零测试 |
-| 前端组件测试  | Vitest + RTL | 无                                   | 零测试                       |
-| E2E 冒烟测试  | Playwright   | 无                                   | CI 未配置                    |
+| 层级          | 计划         | 实际                                                       | 差距                               |
+| ------------- | ------------ | ---------------------------------------------------------- | ---------------------------------- |
+| Rust 单元测试 | 所有模块     | 63 pass, 7 ignored；覆盖 source/book/sync/commands         | db/query 与真实书源集成仍薄        |
+| 前端组件测试  | Vitest + RTL | 12 条测试（ErrorBoundary / highlight helper / stores）     | Reader UI / interaction 仍待补     |
+| E2E 冒烟测试  | Playwright   | 4 条关键路由 smoke，且在 CI 中阻塞                         | 仍不是完整 Tauri 桌面端到端测试    |
 
-**测试覆盖率**: 约 15%（仅规则引擎有测试）
+**测试现状**：CI 已跑 Rust + Vitest + blocking Playwright smoke；真实书源和 Reader 深交互仍待补。
 
 ---
 
@@ -110,7 +110,7 @@
 
 **Beta 就绪状态**：书架导入（虚拟列表）、三种格式阅读（含高亮渲染）、书签笔记（支持 Markdown 导出）、阅读统计（设置持久化）、Legado 规则引擎 5 管线（含发现页）、WebDAV 双向增量同步（凭据加密）、自动更新。CI 自动构建 Windows/macOS/Linux 3 平台安装包。
 
-**测试覆盖**：52 Rust 单元测试 + 9 E2E smoke cases + Playwright CI。
+**测试覆盖**：63 Rust 单元测试（7 ignored）+ 12 Vitest 测试 + 4 Playwright smoke cases；CI 中前端单测与 Playwright 冒烟均为阻塞检查。
 
 **剩余差距**：
 

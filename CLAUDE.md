@@ -2,7 +2,7 @@
 
 Tauri v2 + React 19 + TypeScript desktop app for reading local books (EPUB/TXT/PDF) and web-sourced novels via Legado-compatible book source rule engine.
 
-**Status**: Beta-ready. 65/72 plan items (90%), 52 Rust tests + 9 E2E, CI cross-platform builds.
+**Status**: Beta-ready. Release-hardening baseline covers Rust checks, Vitest, Playwright route smoke, packaged Windows startup smoke, and cross-platform bundles.
 
 ## Tech Stack
 
@@ -43,12 +43,14 @@ pnpm dev              # Vite dev server (port 1420)
 pnpm build            # tsc + vite build
 pnpm lint             # ESLint
 pnpm format           # Prettier
+pnpm test             # Vitest frontend unit tests
 pnpm tauri dev        # Full Tauri app with hot reload
-pnpm tauri build      # Production build (exe + msi + nsis)
+pnpm tauri build      # Production build (use `CI=false` if your shell injects `CI=1`)
+pnpm test:e2e         # Playwright route smoke tests
 
 # Rust (in src-tauri/)
 cargo check           # Type check
-cargo test            # 39 pass, 8 ignored (edge cases)
+cargo test            # Rust backend test suite
 cargo clippy -- -D warnings
 cargo fmt --check
 ```
@@ -72,7 +74,7 @@ xreader/
 │                                   SearchPage, SourceManagePage, SettingsPage, DiscoverPage
 ├── src-tauri/                    # Rust backend
 │   ├── src/
-│   │   ├── main.rs / lib.rs      # Entry + AppState + 27 command registration
+│   │   ├── main.rs / lib.rs      # Entry + AppState + 28 command registration
 │   │   ├── book/                 # BookFormat trait + EPUB/TXT/PDF parsers
 │   │   ├── db/                   # SQLite init, models, queries, V1 migration
 │   │   ├── source/               # Legado rule engine (Phase 5)
@@ -86,9 +88,9 @@ xreader/
 │   ├── Cargo.toml
 │   └── tauri.conf.json
 ├── tests/                        # Test suite
-│   └── e2e/                      # Playwright E2E smoke tests (9 cases)
+│   └── e2e/                      # Playwright route smoke suite
 ├── docs/                         # phase completion reports + USAGE.md
-├── .github/workflows/ci.yml      # CI: check/test/clippy/fmt + E2E + cross-platform builds (.msi/.dmg/.AppImage)
+├── .github/workflows/ci.yml      # CI: check/test/clippy/fmt + blocking Playwright + Windows startup smoke + platform builds
 └── package.json / tailwind.config.js / eslint.config.js / playwright.config.ts / ...
 ```
 
@@ -142,7 +144,7 @@ Legado JSON → compile_source() → CompiledSource
               CssEval | XpathEval | JsonEval | RegexEval | JsEval | TmplEval
 ```
 
-39 tests pass, 8 ignored (JSON/JS edge cases). Supports all Legado rule types except `webJs` and `loginUi` (deferred).
+Release-hardening baseline: `cargo check`, `cargo test`, `pnpm test`, `pnpm test:e2e`, `pnpm build`, and packaged Windows startup smoke. Source-engine support still excludes `webJs` and `loginUi`.
 
 ## Conventions
 
@@ -158,14 +160,13 @@ Legado JSON → compile_source() → CompiledSource
 **Done (Beta-ready)**:
 
 - Bookshelf + import (EPUB/TXT/PDF) with virtual list (@tanstack/react-virtual)
-- Reader core (HTML + pdf.js, sliders, fonts, click-zone page turns, annotation highlighting)
+- Reader baseline: versioned settings, preset styles, paginated progress, configurable tap zones, content search, Chinese conversion, Web Speech TTS, and importable reader bundles
 - Bookmarks + annotations + reading stats with charts + Markdown export
 - Legado rule engine: Tokenizer, 6 evaluators, 5 pipelines (incl. explore/discover)
-- Source management: import/delete, online search, discover page
+- Source management: import/delete, online search, discover page, remote-book reader entry
 - Cloud sync: WebDAV bidirectional, timestamp-based, ChaCha20-Poly1305 encrypted creds
-- Security: SSRF/JS-sandbox/path-traversal/resource-limit hardening
-- CI: check/test/clippy/fmt + Playwright E2E + cross-platform builds (.msi/.dmg/.AppImage)
-- 28 IPC commands, 52 Rust tests (0 fail) + 9 E2E smoke cases
-- User manual: docs/USAGE.md
+- Security: SSRF/JS-sandbox/path-traversal/resource-limit hardening + guarded repair for V1 migration checksum drift
+- CI: check/test/clippy/fmt + blocking Playwright route smoke + Windows packaged startup smoke on PR/main + cross-platform bundles
+- 28 IPC commands, user manual: docs/USAGE.md
 
 **Future**: Phase 8 (TTS/MOBI/dictionary/mobile) — optional post-MVP

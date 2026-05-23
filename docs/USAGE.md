@@ -8,16 +8,18 @@
 
 ### macOS
 
-下载 `.dmg` 文件，拖入 Applications 文件夹。
+如 Releases 页面提供 `.dmg` 安装包，下载后拖入 Applications 文件夹。
 
 ### Linux
 
-下载 `.AppImage` 文件，添加执行权限后运行：
+如 Releases 页面提供 `.AppImage` 安装包，添加执行权限后运行：
 
 ```bash
 chmod +x XReader*.AppImage
 ./XReader*.AppImage
 ```
+
+当前仓库 CI 已包含 macOS / Linux 构建任务；是否对外发布安装包以 Releases 页面为准。
 
 ---
 
@@ -153,7 +155,7 @@ A: 部分 EPUB 内嵌封面可能无法提取，显示为文字标题，不影�
 A: 书源网站可能已变更、需要网络连接、或触发了反爬机制。尝试其他书源。
 
 **Q: 如何获取书源 JSON？**  
-A: 从 [Legado 书源仓库](https://github.com/...) 获取兼容格式的 JSON 文件。
+A: 可从 [Legado (阅读)](https://github.com/gedoor/legado) 及其社区维护的兼容书源集合获取 JSON 文件。
 
 ---
 

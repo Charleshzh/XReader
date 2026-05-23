@@ -12,7 +12,7 @@ export function BookmarkPanel() {
 
   const handleAdd = () => {
     const name = label.trim() || `书签 ${bookmarks.length + 1}`;
-    addBookmark(name);
+    void addBookmark(name);
     setLabel("");
   };
 
@@ -70,7 +70,7 @@ export function BookmarkPanel() {
             >
               <button
                 onClick={() => {
-                  loadChapter(bm.chapter_index);
+                  void loadChapter(bm.chapter_index, bm.position);
                   toggleBookmarks();
                 }}
                 className="flex-1 text-left text-sm hover:text-primary"

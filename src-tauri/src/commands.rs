@@ -20,13 +20,75 @@ pub struct ImportResult {
     pub message: String,
 }
 
-#[tauri::command]
-pub fn import_book(state: State<AppState>, file_path: String) -> Result<ImportResult, String> {
-    let path = PathBuf::from(&file_path);
-
+fn validate_import_path(file_path: &str) -> Result<PathBuf, String> {
+    let path = PathBuf::from(file_path);
     if !path.exists() {
         return Err(format!("File not found: {}", file_path));
     }
+    Ok(path)
+}
+
+fn parse_sync_config_text(raw: &str) -> Result<String, String> {
+    if raw.is_empty() {
+        return Ok(String::new());
+    }
+    match crate::sync::crypto::decrypt(raw) {
+        Ok(decrypted) => Ok(decrypted),
+        Err(_) => Ok(raw.to_string()),
+    }
+}
+
+fn is_allowed_export_directory(path: &std::path::Path) -> bool {
+    path.components().any(|component| {
+        component.as_os_str().to_str().is_some_and(|segment| {
+            segment.eq_ignore_ascii_case("documents")
+                || segment.eq_ignore_ascii_case("downloads")
+                || segment.eq_ignore_ascii_case("desktop")
+        })
+    })
+}
+
+fn validate_export_target(path: &str, content_len: usize) -> Result<PathBuf, String> {
+    if content_len > MAX_EXPORT_SIZE {
+        return Err(format!(
+            "Export content too large: {} bytes (max {})",
+            content_len, MAX_EXPORT_SIZE
+        ));
+    }
+
+    let path_buf = PathBuf::from(path);
+    let parent = path_buf
+        .parent()
+        .ok_or_else(|| "Invalid path: no parent directory".to_string())?;
+    let filename = path_buf
+        .file_name()
+        .ok_or_else(|| "Invalid path: no filename".to_string())?
+        .to_owned();
+    let resolved_parent =
+        fs::canonicalize(parent).map_err(|e| format!("Cannot access directory: {}", e))?;
+
+    if !is_allowed_export_directory(&resolved_parent) {
+        return Err("Export path must be within Documents, Downloads, or Desktop".to_string());
+    }
+
+    Ok(resolved_parent.join(filename))
+}
+
+fn app_data_dir() -> PathBuf {
+    directories::ProjectDirs::from("com", "xreader", "XReader")
+        .map(|dirs| dirs.data_dir().to_path_buf())
+        .unwrap_or_else(|| PathBuf::from("./xreader_data"))
+}
+
+fn remote_chapter_cache_path(book_id: &str, chapter_index: usize) -> PathBuf {
+    app_data_dir()
+        .join("remote_chapters")
+        .join(book_id)
+        .join(format!("{chapter_index}.html"))
+}
+#[tauri::command]
+pub fn import_book(state: State<AppState>, file_path: String) -> Result<ImportResult, String> {
+    let path = validate_import_path(&file_path)?;
 
     let registry = book::create_registry();
     let format = registry
@@ -144,15 +206,70 @@ pub fn delete_book(state: State<AppState>, id: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn get_chapter_content(
-    state: State<AppState>,
+pub async fn get_chapter_content(
+    state: State<'_, AppState>,
     book_id: String,
     chapter_index: usize,
 ) -> Result<String, String> {
-    let db = state.db.lock().map_err(|e| e.to_string())?;
-    let book = db::queries::get_book(&db, &book_id)
-        .map_err(|e| e.to_string())?
-        .ok_or_else(|| "Book not found".to_string())?;
+    let book = {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        db::queries::get_book(&db, &book_id)
+            .map_err(|e| e.to_string())?
+            .ok_or_else(|| "Book not found".to_string())?
+    };
+
+    if book.source_type == "remote" {
+        let (json_str, chapter) = {
+            let db = state.db.lock().map_err(|e| e.to_string())?;
+            let chapter = db::queries::get_remote_chapter(&db, &book.id, chapter_index as i64)
+                .map_err(|e| e.to_string())?
+                .ok_or_else(|| "Chapter not found".to_string())?;
+            let json_str: String = db
+                .query_row(
+                    "SELECT rule_json FROM book_sources WHERE id = ?1",
+                    rusqlite::params![&book.source_id],
+                    |row| row.get(0),
+                )
+                .map_err(|e| e.to_string())?;
+            (json_str, chapter)
+        };
+
+        if chapter.fetched && !chapter.content_path.is_empty() {
+            let cached_path = PathBuf::from(&chapter.content_path);
+            if cached_path.exists() {
+                return fs::read_to_string(&cached_path)
+                    .map_err(|e| format!("Failed to read cached chapter: {}", e));
+            }
+        }
+
+        let json_val: serde_json::Value =
+            serde_json::from_str(&json_str).map_err(|e| format!("Invalid source JSON: {}", e))?;
+        let compiled = crate::source::compile_source(&json_val).map_err(|e| e.to_string())?;
+        let mut pipeline = crate::source::SourcePipeline::new(compiled);
+        let content = pipeline.get_chapter_content(&chapter.url).await?;
+
+        let cache_path = remote_chapter_cache_path(&book.id, chapter_index);
+        if let Some(parent) = cache_path.parent() {
+            fs::create_dir_all(parent)
+                .map_err(|e| format!("Failed to prepare chapter cache: {}", e))?;
+        }
+        fs::write(&cache_path, &content)
+            .map_err(|e| format!("Failed to cache chapter content: {}", e))?;
+
+        let cache_path_str = cache_path.to_string_lossy().to_string();
+        let word_count = content.chars().count() as i64;
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        db::queries::update_remote_chapter_content(
+            &db,
+            &book.id,
+            chapter_index as i64,
+            &cache_path_str,
+            word_count,
+        )
+        .map_err(|e| e.to_string())?;
+
+        return Ok(content);
+    }
 
     let path = PathBuf::from(&book.file_path);
     let registry = book::create_registry();
@@ -186,6 +303,18 @@ pub fn get_chapters(state: State<AppState>, book_id: String) -> Result<Vec<Chapt
         .map_err(|e| e.to_string())?
         .ok_or_else(|| "Book not found".to_string())?;
 
+    if book.source_type == "remote" {
+        let chapters = db::queries::list_remote_chapters(&db, &book.id)
+            .map_err(|e| e.to_string())?
+            .into_iter()
+            .map(|chapter| ChapterItem {
+                index: chapter.index_num as usize,
+                title: chapter.title,
+            })
+            .collect::<Vec<_>>();
+        return Ok(chapters);
+    }
+
     let path = PathBuf::from(&book.file_path);
     let registry = book::create_registry();
     let format = registry
@@ -198,13 +327,85 @@ pub fn get_chapters(state: State<AppState>, book_id: String) -> Result<Vec<Chapt
 
     Ok(chapters
         .into_iter()
-        .map(|c| ChapterItem {
-            index: c.index,
-            title: c.title,
+        .map(|chapter| ChapterItem {
+            index: chapter.index,
+            title: chapter.title,
         })
         .collect())
 }
 
+#[tauri::command]
+pub async fn add_remote_book(
+    state: State<'_, AppState>,
+    source_id: String,
+    book_url: String,
+) -> Result<ImportResult, String> {
+    let (json_str, now) = {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        let json_str: String = db
+            .query_row(
+                "SELECT rule_json FROM book_sources WHERE id = ?1",
+                rusqlite::params![&source_id],
+                |row| row.get(0),
+            )
+            .map_err(|e| e.to_string())?;
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs() as i64;
+        (json_str, now)
+    };
+
+    let json_val: serde_json::Value =
+        serde_json::from_str(&json_str).map_err(|e| format!("Invalid source JSON: {}", e))?;
+    let compiled = crate::source::compile_source(&json_val).map_err(|e| e.to_string())?;
+    let mut pipeline = crate::source::SourcePipeline::new(compiled);
+    let info = pipeline.get_book_info(&book_url).await?;
+    let chapters = pipeline.get_chapter_list(&info.toc_url).await?;
+    let total_chapters = chapters.len();
+
+    let id = uuid::Uuid::new_v4().to_string();
+    let record = crate::db::models::Book {
+        id: id.clone(),
+        title: info.name.clone(),
+        author: info.author.clone(),
+        cover_path: info.cover_url.clone(),
+        file_path: String::new(),
+        format: "remote".into(),
+        source_type: "remote".into(),
+        source_id: source_id.clone(),
+        source_url: book_url.clone(),
+        total_chapters: total_chapters as i64,
+        created_at: now,
+        updated_at: now,
+    };
+
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    db::queries::insert_book(&db, &record).map_err(|e| e.to_string())?;
+    for item in chapters {
+        let chapter = crate::db::models::Chapter {
+            id: format!("{}-{}", id, item.index),
+            book_id: id.clone(),
+            index_num: item.index as i64,
+            title: item.name,
+            url: item.url,
+            content_path: String::new(),
+            word_count: 0,
+            fetched: false,
+        };
+        db::queries::upsert_remote_chapter(&db, &chapter).map_err(|e| e.to_string())?;
+    }
+
+    Ok(ImportResult {
+        id,
+        title: info.name,
+        author: info.author,
+        cover_path: info.cover_url,
+        format: "remote".into(),
+        total_chapters,
+        message: "Successfully imported remote book".into(),
+    })
+}
 #[tauri::command]
 pub fn save_progress(
     state: State<AppState>,
@@ -768,7 +969,7 @@ pub fn get_sync_config(state: State<AppState>) -> Result<serde_json::Value, Stri
     if encrypted.is_empty() {
         return Ok(serde_json::Value::Null);
     }
-    let decrypted = crate::sync::crypto::decrypt(&encrypted).unwrap_or(encrypted); // Graceful fallback for old plaintext
+    let decrypted = parse_sync_config_text(&encrypted)?;
     serde_json::from_str(&decrypted).map_err(|e| e.to_string())
 }
 
@@ -780,7 +981,7 @@ fn load_sync_config(state: &State<AppState>) -> Result<crate::sync::types::SyncC
     if encrypted.is_empty() {
         return Ok(Default::default());
     }
-    let json_str = crate::sync::crypto::decrypt(&encrypted).unwrap_or(encrypted); // Graceful fallback
+    let json_str = parse_sync_config_text(&encrypted)?;
     serde_json::from_str(&json_str).map_err(|e| e.to_string())
 }
 
@@ -808,41 +1009,80 @@ const MAX_EXPORT_SIZE: usize = 10 * 1024 * 1024; // 10 MB
 #[tauri::command]
 #[allow(unused_variables)]
 pub fn write_file(state: State<AppState>, path: String, content: String) -> Result<(), String> {
-    if content.len() > MAX_EXPORT_SIZE {
-        return Err(format!(
-            "Export content too large: {} bytes (max {})",
-            content.len(),
-            MAX_EXPORT_SIZE
-        ));
-    }
-
-    // Canonicalize parent to prevent path traversal (file may not exist yet)
-    let path_buf = std::path::Path::new(&path).to_path_buf();
-    let parent = path_buf
-        .parent()
-        .ok_or_else(|| "Invalid path: no parent directory".to_string())?;
-    let filename = path_buf
-        .file_name()
-        .ok_or_else(|| "Invalid path: no filename".to_string())?
-        .to_string_lossy()
-        .to_string();
-
-    let resolved_parent =
-        std::fs::canonicalize(parent).map_err(|e| format!("Cannot access directory: {}", e))?;
-
-    // Restrict to common export directories
-    let allowed_str = resolved_parent.to_string_lossy().to_lowercase();
-    let is_allowed = allowed_str.contains("\\documents")
-        || allowed_str.contains("/documents")
-        || allowed_str.contains("\\downloads")
-        || allowed_str.contains("/downloads")
-        || allowed_str.contains("\\desktop")
-        || allowed_str.contains("/desktop");
-
-    if !is_allowed {
-        return Err("Export path must be within Documents, Downloads, or Desktop".to_string());
-    }
-
-    let resolved = resolved_parent.join(&filename);
+    let resolved = validate_export_target(&path, content.len())?;
     std::fs::write(&resolved, content).map_err(|e| format!("Failed to write file: {}", e))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    fn unique_temp_dir(label: &str) -> PathBuf {
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_nanos();
+        let dir = std::env::temp_dir().join(format!("xreader-commands-{label}-{nanos}"));
+        fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    #[test]
+    fn test_validate_import_path_rejects_missing_file() {
+        let err = validate_import_path("missing-file.epub").unwrap_err();
+        assert!(err.contains("File not found"));
+    }
+
+    #[test]
+    fn test_parse_sync_config_text_accepts_plaintext_fallback() {
+        let json = r#"{"enabled":false,"backend_type":"webdav","url":"","username":"","password":"","auto_sync_interval_minutes":30}"#;
+        let parsed = parse_sync_config_text(json).unwrap();
+        assert_eq!(parsed, json);
+    }
+
+    #[test]
+    fn test_validate_export_target_rejects_large_payload() {
+        let err = validate_export_target("C:/Users/test/Documents/out.md", MAX_EXPORT_SIZE + 1)
+            .unwrap_err();
+        assert!(err.contains("Export content too large"));
+    }
+
+    #[test]
+    fn test_validate_export_target_accepts_allowed_directory() {
+        let root = unique_temp_dir("allowed");
+        let documents_dir = root.join("Documents");
+        fs::create_dir_all(&documents_dir).unwrap();
+        let export_path = documents_dir.join("reader-notes.md");
+        let resolved = validate_export_target(export_path.to_str().unwrap(), 16).unwrap();
+        assert_eq!(resolved.file_name(), export_path.file_name());
+        assert_eq!(
+            resolved.parent().unwrap(),
+            fs::canonicalize(&documents_dir).unwrap()
+        );
+        fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn test_remote_book_list_item_keeps_source_metadata() {
+        let book = crate::db::models::Book {
+            id: "remote-1".into(),
+            title: "远程书".into(),
+            author: "作者".into(),
+            cover_path: "".into(),
+            file_path: "".into(),
+            format: "remote".into(),
+            source_type: "remote".into(),
+            source_id: "src-1".into(),
+            source_url: "https://example.com/book".into(),
+            total_chapters: 12,
+            created_at: 1,
+            updated_at: 1,
+        };
+
+        let item = crate::db::queries::BookListItem::from(book);
+        assert_eq!(item.source_type, "remote");
+        assert_eq!(item.source_id, "src-1");
+        assert_eq!(item.source_url, "https://example.com/book");
+    }
 }

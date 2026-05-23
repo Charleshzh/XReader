@@ -4,6 +4,8 @@
 **分支**: `main` (commit `5c6ad5d`)  
 **状态**: ✅ 全部 22 项任务完成
 
+> Historical snapshot: this document records the project state when Phase 5 was completed. For the current verified status, see `README.md`.
+
 ---
 
 ## 1. 交付清单

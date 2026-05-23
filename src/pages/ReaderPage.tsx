@@ -9,6 +9,7 @@ import { ChapterTOC } from "@/components/reader/ChapterTOC";
 import { ReaderSettings } from "@/components/reader/ReaderSettings";
 import { BookmarkPanel } from "@/components/reader/BookmarkPanel";
 import { AnnotationPanel } from "@/components/reader/AnnotationPanel";
+import { htmlToSpeechText } from "@/lib/tts";
 import { Loader2 } from "lucide-react";
 
 export function ReaderPage() {
@@ -25,19 +26,25 @@ export function ReaderPage() {
     bookmarksOpen,
     annotationsOpen,
   } = useReaderStore();
-  const books = useBookStore((s) => s.books);
+  const { books, loaded, loadBooks } = useBookStore();
 
   useEffect(() => {
     if (!bookId) return;
-    const target = books.find((b) => b.id === bookId);
-    if (target) {
-      useReaderStore.getState().openBook(target);
-    } else {
-      navigate("/", { replace: true });
+    if (!loaded) {
+      void loadBooks();
+      return;
     }
-  }, [bookId, books, navigate]);
 
-  if (!book) {
+    const target = books.find((candidate) => candidate.id === bookId);
+    if (target) {
+      void useReaderStore.getState().openBook(target);
+      return;
+    }
+
+    navigate("/", { replace: true });
+  }, [bookId, books, loaded, loadBooks, navigate]);
+
+  if (!loaded || !book) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -52,6 +59,7 @@ export function ReaderPage() {
       <ReaderShell
         title={book.title}
         chapterTitle={chapters[currentChapter]?.title || ""}
+        ttsText={isPdf ? "" : htmlToSpeechText(content)}
         onBack={() => navigate("/")}
       >
         {loading ? (
@@ -65,16 +73,9 @@ export function ReaderPage() {
         )}
       </ReaderShell>
 
-      {/* TOC sidebar */}
       {tocOpen && <ChapterTOC />}
-
-      {/* Settings panel */}
       {settingsOpen && <ReaderSettings />}
-
-      {/* Bookmark panel */}
       {bookmarksOpen && <BookmarkPanel />}
-
-      {/* Annotation panel */}
       {annotationsOpen && <AnnotationPanel />}
     </div>
   );

@@ -19,11 +19,15 @@ The library view. Grid or list layout, virtualized with `@tanstack/react-virtual
 
 ### Reader (阅读器)
 
-The reading view. EPUB/TXT use `HtmlContentView` (Rust-extracted chapter HTML, `dangerouslySetInnerHTML`). PDF uses `PdfContentView` (pdfjs-dist Canvas, zoom 0.5-3x). Modes: scroll (continuous, debounced progress save) or paginated (click zones: left 30% = prev chapter, right 30% = next). Settings panel: font size (range slider 10-32px), line height (range slider 1.0-3.0x), font family (5 presets incl. system/serif/sans-serif/KaiTi), theme (light/dark/sepia). All reader settings persisted to `app_settings` table. Chapter TOC sidebar for navigation.
+The reading view. EPUB/TXT use `HtmlContentView` (Rust-extracted chapter HTML via `dangerouslySetInnerHTML`) with annotation highlighting, in-book search highlighting, and optional Chinese conversion. PDF uses `PdfContentView` (pdfjs-dist Canvas, zoom 0.5-3x). Modes: scroll (continuous, debounced progress save) or paginated (page-aware progress save, configurable 3x3 tap zones, optional auto paging). Reader state is versioned in `ReaderSettingsState`: style presets, typography/theme/chrome, interaction settings, and assist settings (Chinese mode, TTS rate, search case-sensitivity). Chapter TOC sidebar, bookmarks/annotations panels, reader search panel, and Web Speech TTS controls are all part of the reader shell. Reader settings persist to `app_settings` with migration support.
 
 ### Reading Progress (阅读进度)
 
-Tracks `(book_id, chapter_index, position)` where `position ∈ [0.0, 1.0]` is fraction within chapter. Updated on page turn or scroll position change. Auto-restored on reopen.
+Tracks `(book_id, chapter_index, position)` where `position ∈ [0.0, 1.0]` is the fraction within the current chapter. Scroll mode derives it from scroll offset; paginated mode derives it from `currentPage / totalPages`. Auto-restored on reopen.
+
+### Reader Bundle (阅读配置包)
+
+A JSON import/export payload for reader settings. Kind: `xreader-reader-bundle`, versioned separately from the app, currently carrying `ReaderSettingsState` plus reserved `extensions` data for future compatibility. Used to back up or share reading presets without touching sync data.
 
 ### Bookmark (书签)
 
@@ -31,7 +35,7 @@ A named saved position: `(book_id, chapter_index, position, label)`. Jump-to fun
 
 ### Annotation (笔记/高亮)
 
-A text selection with optional note: `(book_id, chapter_index, start_position, end_position, text, note, color)`. Color preset: yellow/green/blue/pink/orange/purple.
+A text selection with optional note: `(book_id, chapter_index, start_position, end_position, text, note, color)`. Color preset: yellow/green/blue/pink/orange.
 
 ### Reading Stats (阅读统计)
 
@@ -95,7 +99,7 @@ Frontend page at `/discover` that uses the Explore pipeline to show a book sourc
 
 ### Chapter Caching
 
-Remote chapter content cached to disk. Preload: current chapter ± 2 adjacent. TTL: 24 hours. Manual refresh supported.
+Remote chapter content cached to disk. Preload: current chapter ± 1 adjacent. Fetch is best-effort and deduplicated by the Rust/Tauri content pipeline.
 
 ## Sync (同步) — ✅ Phase 6 implemented
 
@@ -155,4 +159,4 @@ Annotations are visually rendered in `HtmlContentView` via `<mark>` elements wit
 
 ### E2E Testing
 
-Playwright + Chromium. 9 smoke tests: bookshelf empty/import dialog, stats page, source manage, discover page, settings, reader error state. CI job runs on Linux. `pnpm test:e2e`.
+Playwright + Chromium route smoke on Linux covers the bookshelf, search, stats, and reader redirect path. CI treats it as blocking. The Windows packaging job separately launches the built desktop binary twice: once against a clean profile and once against a pre-seeded divergent-migration profile.

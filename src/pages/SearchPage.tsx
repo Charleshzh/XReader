@@ -1,29 +1,26 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSourceStore } from "@/stores/sourceStore";
+import { useBookStore } from "@/stores/bookStore";
 import { Button } from "@/components/ui/button";
 import { Search, Loader2, ArrowLeft } from "lucide-react";
 
 export function SearchPage() {
   const navigate = useNavigate();
   const { sources, searchResults, searching, loadSources, searchBooks } = useSourceStore();
+  const { addRemoteBook } = useBookStore();
   const [keyword, setKeyword] = useState("");
   const [sourceId, setSourceId] = useState("");
 
   useEffect(() => {
-    loadSources();
+    void loadSources();
   }, [loadSources]);
 
-  useEffect(() => {
-    if (sources.length > 0 && !sourceId) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setSourceId(sources[0].id);
-    }
-  }, [sources, sourceId]);
+  const activeSourceId = sourceId || sources[0]?.id || "";
 
   const handleSearch = () => {
-    if (!keyword.trim() || !sourceId) return;
-    searchBooks(sourceId, keyword);
+    if (!keyword.trim() || !activeSourceId) return;
+    void searchBooks(activeSourceId, keyword);
   };
 
   return (
@@ -38,10 +35,9 @@ export function SearchPage() {
       </header>
 
       <main className="flex-1 overflow-auto p-6">
-        {/* Search bar */}
         <div className="mb-6 flex gap-3">
           <select
-            value={sourceId}
+            value={activeSourceId}
             onChange={(e) => setSourceId(e.target.value)}
             className="rounded border bg-background px-3 py-2 text-sm"
           >
@@ -69,25 +65,38 @@ export function SearchPage() {
           </Button>
         </div>
 
-        {/* Results */}
         {searchResults.length > 0 && (
           <div className="space-y-3">
-            {searchResults.map((r, i) => (
-              <div key={i} className="flex gap-4 rounded-lg border p-4">
-                {r.cover_url && (
+            {searchResults.map((result, index) => (
+              <div key={`${result.book_url}-${index}`} className="flex gap-4 rounded-lg border p-4">
+                {result.cover_url && (
                   <img
-                    src={r.cover_url}
-                    alt={r.name}
+                    src={result.cover_url}
+                    alt={result.name}
                     className="h-24 w-16 shrink-0 rounded object-cover"
                   />
                 )}
                 <div className="flex-1">
-                  <h3 className="font-semibold">{r.name}</h3>
-                  {r.author && <p className="text-sm text-muted-foreground">{r.author}</p>}
-                  {r.intro && (
-                    <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{r.intro}</p>
+                  <h3 className="font-semibold">{result.name}</h3>
+                  {result.author && (
+                    <p className="text-sm text-muted-foreground">{result.author}</p>
+                  )}
+                  {result.intro && (
+                    <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                      {result.intro}
+                    </p>
                   )}
                 </div>
+                <Button
+                  variant="outline"
+                  disabled={!activeSourceId}
+                  onClick={async () => {
+                    const added = await addRemoteBook(activeSourceId, result.book_url);
+                    navigate(`/reader/${added.id}`);
+                  }}
+                >
+                  加入书架
+                </Button>
               </div>
             ))}
           </div>

@@ -55,6 +55,7 @@ pub fn run() {
             greet,
             get_app_version,
             commands::import_book,
+            commands::add_remote_book,
             commands::list_books,
             commands::delete_book,
             commands::get_chapter_content,

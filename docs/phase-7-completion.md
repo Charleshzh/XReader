@@ -4,6 +4,8 @@
 **分支**: `main` (commit `003c61d`)  
 **状态**: ✅ 全部 7 项任务完成 — MVP 交付
 
+> Historical snapshot: this document records the project state when Phase 7 was completed. For the current verified status, see `README.md`.
+
 ---
 
 ## 1. 交付清单

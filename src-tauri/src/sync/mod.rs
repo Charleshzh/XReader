@@ -486,4 +486,20 @@ mod tests {
             .unwrap();
         assert_eq!(count, 1);
     }
+
+    #[test]
+    fn test_apply_merge_updates_sync_meta_for_all_tables() {
+        let db = test_db();
+        let rows = vec![(
+            "books".to_string(),
+            vec![json!({"id":"b1","title":"书","author":"","format":"txt","updated_at":1000})],
+        )];
+
+        let (_uploaded, _downloaded) = SyncEngine::apply_merge(&db, &rows).unwrap();
+
+        let count: i64 = db
+            .query_row("SELECT COUNT(*) FROM sync_meta", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(count, SYNC_TABLES.len() as i64);
+    }
 }

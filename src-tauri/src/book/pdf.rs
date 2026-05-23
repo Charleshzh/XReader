@@ -45,3 +45,26 @@ impl BookFormat for PdfFormat {
         Ok("<html><body><p>PDF content rendered by pdf.js</p></body></html>".to_string())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::Path;
+
+    #[test]
+    fn test_pdf_format_uses_filename_as_title() {
+        let format = PdfFormat;
+        let meta = format.parse(Path::new("D:/Books/凡人修仙传.pdf")).unwrap();
+        assert_eq!(meta.title, "凡人修仙传");
+        assert_eq!(meta.format, "pdf");
+        assert_eq!(meta.total_chapters, 1);
+    }
+
+    #[test]
+    fn test_pdf_format_returns_single_placeholder_chapter() {
+        let format = PdfFormat;
+        let chapters = format.get_chapters(Path::new("D:/Books/demo.pdf")).unwrap();
+        assert_eq!(chapters.len(), 1);
+        assert_eq!(chapters[0].title, "正文");
+    }
+}
