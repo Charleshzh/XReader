@@ -75,18 +75,26 @@ jobs:
   build-windows:
     name: Build (Windows)
     runs-on: windows-latest
-    needs: [rust, frontend]
-    if: github.ref == 'refs/heads/main'
+    needs: [rust, frontend, e2e]
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
         with: { version: 11 }
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: pnpm }
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.x' }
       - run: pnpm install --frozen-lockfile
       - uses: dtolnay/rust-toolchain@stable
       - name: Build Tauri app
         run: pnpm tauri build
+      - name: Smoke test packaged app (clean profile)
+        shell: pwsh
+        run: ./.github/scripts/windows-startup-smoke.ps1 -BinaryPath ./src-tauri/target/release/xreader.exe
+      - name: Smoke test packaged app (divergent migration profile)
+        shell: pwsh
+        run: ./.github/scripts/windows-startup-smoke.ps1 -BinaryPath ./src-tauri/target/release/xreader.exe -SeedDivergentDb -MigrationPath ./src-tauri/src/db/migrations/V1__initial_schema.sql
       - uses: actions/upload-artifact@v4
         with:
           name: xreader-windows

@@ -2,7 +2,7 @@
 
 Tauri v2 desktop app for reading local books (EPUB/TXT/PDF) and web-sourced novels via Legado-compatible book source rule engine.
 
-**Status**: Beta-ready — current verified baseline: 63 Rust tests (7 ignored), 12 Vitest tests, 4 Playwright smoke tests, CI cross-platform builds.
+**Status**: Beta-ready — release hardening verified by Rust tests, Vitest, Playwright route smoke, and packaged Windows startup smoke.
 
 ## Quick Start
 
@@ -20,12 +20,11 @@ pnpm tauri dev
 
 ### Reader Core
 
-- EPUB/TXT HTML rendering (scroll or paginated), PDF canvas rendering (pdf.js, zoom 0.5-3x)
-- Chapter TOC sidebar with jump navigation
-- Settings panel: font size slider (10-32px), line height slider (1.0-3.0x), font family (system/serif/sans-serif/KaiTi/monospace), theme (light/dark/sepia), scroll/page mode
-- Reading progress auto-save and restore; all reader settings persisted
-- Keyboard navigation (Arrow keys) + click-zone page turns (left/right 30%)
-- Annotation text highlighting in five colors (yellow/green/blue/pink/orange)
+- EPUB/TXT HTML rendering with annotation + search highlighting, Chinese conversion, and scroll/paginated reading; PDF canvas rendering (pdf.js, zoom 0.5-3x)
+- Chapter TOC sidebar, exact progress restore, page-aware progress saving, and keyboard navigation
+- Versioned reader settings with style presets, configurable typography/theme/chrome, configurable 3x3 tap zones, and optional auto paging
+- Built-in content search, Web Speech TTS speed control for HTML chapters, and bookmarks/annotations side panels
+- Reader bundle import/export for backing up or sharing reader settings
 
 ### Bookmarks & Annotations
 
@@ -58,8 +57,8 @@ pnpm tauri dev
 
 ### Settings & UX
 
-- Reader settings persisted to SQLite (font size, line height, font family, theme, mode)
-- Back navigation on all sub-pages (stats, search, sources, settings, discover)
+- Versioned reader settings and sync configuration persisted to SQLite
+- Reader bundle import/export, route-level error boundary, and back navigation on all sub-pages (stats, search, sources, settings, discover)
 
 ## Tech Stack
 
@@ -93,14 +92,16 @@ pnpm format           # Prettier
 pnpm test             # Vitest frontend unit tests
 pnpm tauri dev        # Full Tauri app with hot reload
 pnpm tauri build      # Production build (exe + msi + nsis)
-pnpm test:e2e         # Playwright route smoke tests (4 cases)
+pnpm test:e2e         # Playwright route smoke tests
 ```
+
+If your shell injects `CI=1`, use `CI=false pnpm tauri build`.
 
 In `src-tauri/`:
 
 ```bash
 cargo check           # Type check
-cargo test            # 63 pass, 7 ignored
+cargo test            # Rust backend test suite
 cargo clippy -- -D warnings
 cargo fmt --check
 ```
