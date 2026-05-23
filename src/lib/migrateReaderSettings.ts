@@ -18,7 +18,12 @@ const VALID_THEMES = new Set<ReaderTheme>(["light", "dark", "sepia", "green", "g
 const VALID_TITLE_MODES = new Set<TitleMode>(["left", "center", "hidden"]);
 const VALID_FONT_WEIGHTS = new Set<ReaderStylePreset["fontWeight"]>(["normal", "medium", "bold"]);
 const VALID_CHROME_ITEMS = new Set<ChromeItem>(["none", "chapter", "clock", "progress", "book"]);
-const VALID_PAGE_TURNS = new Set<InteractionSettings["pageTurn"]>(["none", "slide", "cover", "fade"]);
+const VALID_PAGE_TURNS = new Set<InteractionSettings["pageTurn"]>([
+  "none",
+  "slide",
+  "cover",
+  "fade",
+]);
 const VALID_SCROLL_MODES = new Set<InteractionSettings["scrollMode"]>(["scroll", "paginated"]);
 const VALID_CHINESE_MODES = new Set<AssistSettings["chineseMode"]>([
   "original",
@@ -85,15 +90,18 @@ function normalizeStylePreset(
     letterSpacing: coerceNumber(style.letterSpacing, fallback.letterSpacing),
     paragraphSpacing: coerceNumber(style.paragraphSpacing, fallback.paragraphSpacing),
     paragraphIndent: coerceNumber(style.paragraphIndent, fallback.paragraphIndent),
-    fontFamily: typeof style.fontFamily === "string" && style.fontFamily.trim()
-      ? style.fontFamily
-      : fallback.fontFamily,
+    fontFamily:
+      typeof style.fontFamily === "string" && style.fontFamily.trim()
+        ? style.fontFamily
+        : fallback.fontFamily,
     fontWeight: VALID_FONT_WEIGHTS.has(style.fontWeight as ReaderStylePreset["fontWeight"])
       ? (style.fontWeight as ReaderStylePreset["fontWeight"])
       : fallback.fontWeight,
     marginH: coerceNumber(style.marginH, fallback.marginH),
     marginV: coerceNumber(style.marginV, fallback.marginV),
-    theme: VALID_THEMES.has(style.theme as ReaderTheme) ? (style.theme as ReaderTheme) : fallback.theme,
+    theme: VALID_THEMES.has(style.theme as ReaderTheme)
+      ? (style.theme as ReaderTheme)
+      : fallback.theme,
     titleMode: VALID_TITLE_MODES.has(style.titleMode as TitleMode)
       ? (style.titleMode as TitleMode)
       : fallback.titleMode,
@@ -158,11 +166,13 @@ function normalizeAssistSettings(value: unknown): AssistSettings {
 
 function normalizeReaderSettingsState(value: Partial<ReaderSettingsState>): ReaderSettingsState {
   const fallback = cloneReaderSettingsState(DEFAULT_READER_SETTINGS_STATE);
-  const styles = Array.isArray(value.styles) && value.styles.length > 0
-    ? value.styles.map((style, index) => normalizeStylePreset(style, fallback.styles[0], index))
-    : fallback.styles.map(cloneReaderStylePreset);
+  const styles =
+    Array.isArray(value.styles) && value.styles.length > 0
+      ? value.styles.map((style, index) => normalizeStylePreset(style, fallback.styles[0], index))
+      : fallback.styles.map(cloneReaderStylePreset);
   const activeStyleId =
-    typeof value.activeStyleId === "string" && styles.some((style) => style.id === value.activeStyleId)
+    typeof value.activeStyleId === "string" &&
+    styles.some((style) => style.id === value.activeStyleId)
       ? value.activeStyleId
       : styles[0].id;
 
@@ -205,7 +215,10 @@ export function migrateReaderSettings(value: unknown): ReaderSettingsState {
     return cloneReaderSettingsState(DEFAULT_READER_SETTINGS_STATE);
   }
 
-  if ((value as { version?: number }).version === 1 && Array.isArray((value as ReaderSettingsState).styles)) {
+  if (
+    (value as { version?: number }).version === 1 &&
+    Array.isArray((value as ReaderSettingsState).styles)
+  ) {
     return normalizeReaderSettingsState(value as Partial<ReaderSettingsState>);
   }
 

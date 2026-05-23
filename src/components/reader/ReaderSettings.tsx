@@ -58,9 +58,7 @@ export function ReaderSettings() {
             <span className="text-muted-foreground">简繁显示</span>
             <select
               value={settingsState.assist.chineseMode}
-              onChange={(event) =>
-                patchAssist({ chineseMode: event.target.value as ChineseMode })
-              }
+              onChange={(event) => patchAssist({ chineseMode: event.target.value as ChineseMode })}
               className="h-9 w-full rounded border bg-background px-2 text-xs outline-none focus:border-primary"
             >
               {CHINESE_MODE_OPTIONS.map((option) => (
@@ -74,9 +72,7 @@ export function ReaderSettings() {
             <input
               type="checkbox"
               checked={settingsState.assist.searchCaseSensitive}
-              onChange={(event) =>
-                patchAssist({ searchCaseSensitive: event.target.checked })
-              }
+              onChange={(event) => patchAssist({ searchCaseSensitive: event.target.checked })}
             />
             正文搜索区分大小写
           </label>

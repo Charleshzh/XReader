@@ -164,7 +164,10 @@ export function ReaderShell({ title, chapterTitle, ttsText, onBack, children }: 
         <Button variant="ghost" size="icon" onClick={handleBack}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <div className="flex-1 truncate px-3 text-center text-sm" style={{ fontSize: activeStyle.titleSize }}>
+        <div
+          className="flex-1 truncate px-3 text-center text-sm"
+          style={{ fontSize: activeStyle.titleSize }}
+        >
           {showToolbarTitle ? (
             <span className="font-medium">{title}</span>
           ) : (
@@ -183,7 +186,11 @@ export function ReaderShell({ title, chapterTitle, ttsText, onBack, children }: 
           >
             {playing ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
           </Button>
-          <Button variant="ghost" size="icon" onClick={() => useReaderStore.setState({ showSearchPanel: true })}>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => useReaderStore.setState({ showSearchPanel: true })}
+          >
             <Search className="h-4 w-4" />
           </Button>
           <Button variant="ghost" size="icon" onClick={toggleToc}>

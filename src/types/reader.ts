@@ -101,11 +101,13 @@ export const DEFAULT_STYLE_PRESET: ReaderStylePreset = {
 export const DEFAULT_READER_SETTINGS_STATE: ReaderSettingsState = {
   version: 1,
   activeStyleId: DEFAULT_STYLE_PRESET.id,
-  styles: [{
-    ...DEFAULT_STYLE_PRESET,
-    header: { ...DEFAULT_STYLE_PRESET.header },
-    footer: { ...DEFAULT_STYLE_PRESET.footer },
-  }],
+  styles: [
+    {
+      ...DEFAULT_STYLE_PRESET,
+      header: { ...DEFAULT_STYLE_PRESET.header },
+      footer: { ...DEFAULT_STYLE_PRESET.footer },
+    },
+  ],
   interaction: {
     scrollMode: "paginated",
     pageTurn: "none",

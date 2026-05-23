@@ -37,9 +37,7 @@ describe("bookStore remote books", () => {
         },
       ]);
 
-    const result = await useBookStore
-      .getState()
-      .addRemoteBook("src-1", "https://example.com/book");
+    const result = await useBookStore.getState().addRemoteBook("src-1", "https://example.com/book");
 
     expect(result.id).toBe("remote-1");
     expect(mockInvoke).toHaveBeenCalledWith("add_remote_book", {

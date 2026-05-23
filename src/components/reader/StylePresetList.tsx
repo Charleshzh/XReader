@@ -2,7 +2,8 @@ import { useReaderStore } from "@/stores/readerStore";
 import { Button } from "@/components/ui/button";
 
 export function StylePresetList() {
-  const { settingsState, selectStylePreset, createStylePreset, deleteStylePreset } = useReaderStore();
+  const { settingsState, selectStylePreset, createStylePreset, deleteStylePreset } =
+    useReaderStore();
 
   return (
     <section className="space-y-3">

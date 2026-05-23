@@ -49,12 +49,7 @@ export function HtmlContentView({ content }: HtmlContentViewProps) {
       searchQuery,
       settingsState.assist.searchCaseSensitive,
     );
-  }, [
-    chapterAnnotations,
-    convertedContent,
-    searchQuery,
-    settingsState.assist.searchCaseSensitive,
-  ]);
+  }, [chapterAnnotations, convertedContent, searchQuery, settingsState.assist.searchCaseSensitive]);
 
   const {
     fontSize,
@@ -80,18 +75,9 @@ export function HtmlContentView({ content }: HtmlContentViewProps) {
 
   useEffect(() => {
     setSearchMatches(
-      findContentMatches(
-        convertedContent,
-        searchQuery,
-        settingsState.assist.searchCaseSensitive,
-      ),
+      findContentMatches(convertedContent, searchQuery, settingsState.assist.searchCaseSensitive),
     );
-  }, [
-    convertedContent,
-    searchQuery,
-    setSearchMatches,
-    settingsState.assist.searchCaseSensitive,
-  ]);
+  }, [convertedContent, searchQuery, setSearchMatches, settingsState.assist.searchCaseSensitive]);
 
   useEffect(() => {
     const article = articleRef.current;
@@ -99,7 +85,8 @@ export function HtmlContentView({ content }: HtmlContentViewProps) {
     const paragraphs = article.querySelectorAll("p");
     paragraphs.forEach((paragraph, index) => {
       paragraph.style.textIndent = `${paragraphIndent}em`;
-      paragraph.style.marginBottom = index === paragraphs.length - 1 ? "0px" : `${paragraphSpacing}px`;
+      paragraph.style.marginBottom =
+        index === paragraphs.length - 1 ? "0px" : `${paragraphSpacing}px`;
     });
   }, [highlightedContent, paragraphIndent, paragraphSpacing]);
 
@@ -107,9 +94,9 @@ export function HtmlContentView({ content }: HtmlContentViewProps) {
     if (searchMatches.length === 0) return;
     const article = articleRef.current;
     if (!article) return;
-    const target = article.querySelector(`[data-search-index="${currentSearchIndex}"]`) as
-      | HTMLElement
-      | null;
+    const target = article.querySelector(
+      `[data-search-index="${currentSearchIndex}"]`,
+    ) as HTMLElement | null;
     target?.scrollIntoView({ block: isPaginated ? "nearest" : "center", inline: "center" });
   }, [currentSearchIndex, highlightedContent, isPaginated, searchMatches.length]);
 

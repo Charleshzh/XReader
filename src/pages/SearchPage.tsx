@@ -23,7 +23,6 @@ export function SearchPage() {
     void searchBooks(activeSourceId, keyword);
   };
 
-
   return (
     <div className="flex h-screen flex-col bg-background">
       <header className="flex items-center justify-between border-b px-6 py-4">
@@ -83,7 +82,9 @@ export function SearchPage() {
                     <p className="text-sm text-muted-foreground">{result.author}</p>
                   )}
                   {result.intro && (
-                    <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{result.intro}</p>
+                    <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                      {result.intro}
+                    </p>
                   )}
                 </div>
                 <Button

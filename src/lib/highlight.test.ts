@@ -20,7 +20,10 @@ describe("highlightAnnotations", () => {
   });
 
   it("avoids overlapping spans", () => {
-    const html = highlightAnnotations("<p>测试测试</p>", [ann("测试测试", "pink"), ann("测试", "blue")]);
+    const html = highlightAnnotations("<p>测试测试</p>", [
+      ann("测试测试", "pink"),
+      ann("测试", "blue"),
+    ]);
     expect((html.match(/<mark/g) ?? []).length).toBe(1);
   });
 

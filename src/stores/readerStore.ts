@@ -370,15 +370,16 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
       return;
     }
 
-    const styles = current.styles.filter((style) => style.id !== styleId).map(cloneReaderStylePreset);
+    const styles = current.styles
+      .filter((style) => style.id !== styleId)
+      .map(cloneReaderStylePreset);
     if (styles.length === current.styles.length) {
       return;
     }
 
     setPersistedSettingsState(set, {
       ...current,
-      activeStyleId:
-        current.activeStyleId === styleId ? styles[0].id : current.activeStyleId,
+      activeStyleId: current.activeStyleId === styleId ? styles[0].id : current.activeStyleId,
       styles,
     });
   },
